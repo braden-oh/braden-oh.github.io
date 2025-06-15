@@ -1,0 +1,20 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Flappy Goose - Father's Day Edition</title>
+    <style>
+        body { margin: 0; background: black; overflow: hidden; }
+        canvas { display: block; margin: auto; background: url('background.png') no-repeat center center; background-size: cover; }
+        #message { position: absolute; width: 100%; top: 40%; text-align: center; color: white; font-size: 2rem; display: none; }
+        #score { position: absolute; top: 10px; left: 10px; color: white; font-size: 1.5rem; }
+    </style>
+</head>
+<body>
+    <div id="score">Score: 0</div>
+    <div id="message">Happy Father’s Day, Goose! We love you 💖 – from your crew: Aria, the Baby, and your copilot</div>
+    <canvas id="gameCanvas" width="480" height="640"></canvas>
+    <script src="game.js"></script>
+</body>
+</html>
