@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RA Roster Comparison Tool</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+            color: #333;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        h1, h2 { color: #00274C; /* University Blue */ }
+        .drop-zone {
+            border: 2px dashed #ccc;
+            border-radius: 6px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 20px;
+            background-color: #fafafa;
+            cursor: pointer;
+            transition: border 0.3s ease, background-color 0.3s ease;
+        }
+        .drop-zone.dragover {
+            border-color: #FFCB05; /* Maize */
+            background-color: #fffdf5;
+        }
+        .file-info {
+            margin-top: 10px;
+            font-weight: bold;
+            color: #2e7d32;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #00274C;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #001a33;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        pre {
+            background-color: #2d2d2d;
+            color: #f8f8f2;
+            padding: 20px;
+            border-radius: 6px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Roster Comparison Tool</h1>
+    <p>Upload your M Community and StarRez CSV files to identify which uniqnames need to be added or removed. All processing happens securely on your computer.</p>
+
+    <div class="form-group">
+        <label for="keepList">Uniqnames to KEEP (comma separated):</label>
+        <input type="text" id="keepList" value="jpclay, imel, mcteed, dtgary, bradenoh, oakwood">
+    </div>
+
+    <div class="drop-zone" id="mcDropZone">
+        <p><strong>Drag & Drop M Community CSV here</strong><br>or click to select file</p>
+        <input type="file" id="mcFileInput" accept=".csv" style="display: none;">
+        <div class="file-info" id="mcFileInfo"></div>
+    </div>
+
+    <div class="drop-zone" id="srDropZone">
+        <p><strong>Drag & Drop StarRez CSV here</strong><br>or click to select file</p>
+        <input type="file" id="srFileInput" accept=".csv" style="display: none;">
+        <div class="file-info" id="srFileInfo"></div>
+    </div>
+
+    <button id="compareBtn" disabled>Compare Rosters</button>
+
+    <h2>Output Log</h2>
+    <pre id="outputLog">Awaiting files...</pre>
+</div>
+
+<script>
+    // Variables to store parsed CSV data
+    let mcData = null;
+    let srData = null;
+
+    // --- File Upload & Drag-and-Drop Logic ---
+    function setupDropZone(zoneId, inputId, infoId, dataTarget) {
+        const dropZone = document.getElementById(zoneId);
+        const fileInput = document.getElementById(inputId);
+        const fileInfo = document.getElementById(infoId);
+
+        // Click to open file dialog
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        // Drag and drop events
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length) {
+                fileInput.files = e.dataTransfer.files;
+                processFile(fileInput.files[0], fileInfo, dataTarget);
+            }
+        });
+
+        // Input change event (when file is selected via click)
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length) {
+                processFile(fileInput.files[0], fileInfo, dataTarget);
+            }
+        });
+    }
+
+    // Parse CSV using PapaParse
+    function processFile(file, infoElement, dataTarget) {
+        infoElement.textContent = `Loaded: ${file.name}`;
+        Papa.parse(file, {
+            header: true,
+            skipEmptyLines: true,
+            complete: function(results) {
+                if (dataTarget === 'mc') mcData = results.data;
+                if (dataTarget === 'sr') srData = results.data;
+                checkReady();
+            }
+        });
+    }
+
+    // Enable compare button only when both files are loaded
+    function checkReady() {
+        const btn = document.getElementById('compareBtn');
+        if (mcData && srData) {
+            btn.disabled = false;
+        }
+    }
+
+    // Initialize Drop Zones
+    setupDropZone('mcDropZone', 'mcFileInput', 'mcFileInfo', 'mc');
+    setupDropZone('srDropZone', 'srFileInput', 'srFileInfo', 'sr');
+
+    // --- Comparison Logic (Replicating Python Script) ---
+    document.getElementById('compareBtn').addEventListener('click', () => {
+        
+        // 1. Get current date/time for the log
+        const now = new Date();
+        const ymd = now.getFullYear() + '-' + 
+                    String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+                    String(now.getDate()).padStart(2, '0') + ' ' + 
+                    String(now.getHours()).padStart(2, '0') + ':' + 
+                    String(now.getMinutes()).padStart(2, '0') + ':' + 
+                    String(now.getSeconds()).padStart(2, '0');
+
+        // 2. Parse the "Keep" list
+        const keepInput = document.getElementById('keepList').value;
+        const keepArray = keepInput.split(',').map(name => name.trim().toLowerCase()).filter(name => name !== "");
+
+        // 3. Extract Uniqnames from M Community and make them a Set
+        // We use || '' to prevent errors if a row has a blank uniqname cell
+        let mcNames = mcData.map(row => (row['Uniqname'] || '').trim().toLowerCase());
+        mcNames = new Set([...mcNames, ...keepArray]); 
+
+        // 4. Extract Identifiers from StarRez and make them a Set
+        let srNames = srData.map(row => (row['Identifier'] || '').trim().toLowerCase());
+        srNames = new Set(srNames);
+
+        // 5. Perform Logical Analysis (Set Subtraction)
+        const toAdd = [...mcNames].filter(name => !srNames.has(name) && name !== "");
+        const toRemove = [...srNames].filter(name => !mcNames.has(name) && name !== "");
+
+        // 6. Generate Output String
+        let outputText = `${ymd}\n\n`;
+
+        outputText += 'Uniqnames to ADD to M Community:\n';
+        toAdd.forEach(uniqname => {
+            // Find the original row in MC data to get the first and last name
+            // (Using find instead of python's iloc to handle missing data gracefully)
+            const row = mcData.find(r => (r['Uniqname'] || '').trim().toLowerCase() === uniqname);
+            let fullName = "Name Not Found"; // Fallback for names in the "Keep" list not in the CSV
+            if (row && row['First Name'] && row['Last Name']) {
+                fullName = `${row['First Name']} ${row['Last Name']}`;
+            }
+            outputText += `+ ${uniqname} (${fullName})\n`;
+        });
+
+        outputText += '\nUniqnames to REMOVE from M Community:\n';
+        toRemove.forEach(uniqname => {
+            // Find the original row in SR data to get the full name
+            const row = srData.find(r => (r['Identifier'] || '').trim().toLowerCase() === uniqname);
+            let fullName = row && row['Name'] ? row['Name'] : "Name Not Found";
+            outputText += `- ${uniqname} (${fullName})\n`;
+        });
+
+        // 7. Display Output
+        document.getElementById('outputLog').textContent = outputText;
+    });
+</script>
+
+</body>
+</html>
