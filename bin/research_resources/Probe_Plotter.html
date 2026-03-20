@@ -101,6 +101,7 @@
     <div class="controls">
         <button id="clear-btn" class="danger">Clear Plot</button>
         <button id="download-btn">Save Image</button>
+        <button id="toggle-log-btn">Toggle Log Y</button>
         
         <div style="border-left: 2px solid #ccc; margin: 0 10px; height: 30px;"></div>
         
@@ -283,16 +284,19 @@
         Plotly.relayout(plotDiv, { annotations: [] });
         updateTraceList();
     });
-    /*
-    document.getElementById('clear-btn').addEventListener('click', () => {
-        while (plotDiv.data.length > 0) {
-            Plotly.deleteTraces(plotDiv,);
-        }
-        // Also clear any custom labels added to the layout
-        Plotly.relayout(plotDiv, { annotations: [] });
-        updateTraceList();
+
+    let isLogScale = false;
+    const logBtn = document.getElementById('toggle-log-btn');
+
+    logBtn.addEventListener('click', () => {
+        isLogScale = !isLogScale;
+
+        Plotly.relayout(plotDiv, {
+            'yaxis.type': isLogScale ? 'log' : 'linear'
+        });
+
+        logBtn.textContent = isLogScale ? 'Use Linear Y' : 'Use Log Y';
     });
-    */
 
     // Add Dynamic Label
     document.getElementById('add-label-btn').addEventListener('click', () => {
