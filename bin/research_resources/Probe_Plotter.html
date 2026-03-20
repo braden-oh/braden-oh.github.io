@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plasma Data Visualizer</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f9f9f9;
+        }
+        h1 { text-align: center; }
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        #drop-zone {
+            width: 100%;
+            height: 100px;
+            border: 2px dashed #007bff;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #007bff;
+            font-weight: bold;
+            margin-bottom: 20px;
+            transition: background-color 0.2s;
+            cursor: pointer;
+        }
+        #drop-zone.hover {
+            background-color: #e6f2ff;
+        }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding: 10px;
+            background: #f1f1f1;
+            border-radius: 5px;
+            align-items: center;
+        }
+        .controls input, .controls button {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .controls button {
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+            border: none;
+            font-weight: bold;
+        }
+        .controls button:hover { background-color: #0056b3; }
+        .controls button.danger { background-color: #dc3545; }
+        .controls button.danger:hover { background-color: #a71d2a; }
+        
+        #plot {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .trace-list-container { margin-top: 10px; }
+        .trace-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+            padding: 5px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        .trace-item input[type="color"] {
+            cursor: pointer;
+            border: none;
+            width: 30px;
+            height: 30px;
+            padding: 0;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Plasma Data Visualizer (RPA / Langmuir)</h1>
+    
+    <div id="drop-zone">Drag and Drop CSV / TSV files here</div>
+    
+    <div class="controls">
+        <button id="clear-btn" class="danger">Clear Plot</button>
+        <button id="download-btn">Save Image</button>
+        
+        <div style="border-left: 2px solid #ccc; margin: 0 10px; height: 30px;"></div>
+        
+        <strong>Add Custom Label:</strong>
+        <input type="text" id="label-text" placeholder="Trace Label" value="My Label">
+        <input type="number" id="label-size" value="16" style="width: 60px;" title="Font Size">
+        <input type="color" id="label-color" value="#000000" title="Text Color">
+        <button id="add-label-btn">Add to Plot</button>
+        <small>(Drag added labels to move them)</small>
+    </div>
+
+    <div id="plot"></div>
+
+    <div class="trace-list-container">
+        <h3>Loaded Files & Colors</h3>
+        <div id="trace-list"><i>No data loaded yet.</i></div>
+    </div>
+</div>
+
+<script>
+    // -------------------------------------------------------------------------
+    // 1. Initialize Plotly
+    // -------------------------------------------------------------------------
+    const plotDiv = document.getElementById('plot');
+    
+    // Layout template
+    let layout = {
+        title: 'Click to Edit Title',
+        xaxis: { title: 'Bias Voltage (V)' },
+        yaxis: { 
+            title: 'Probe Current (A)', 
+            exponentformat: 'E',   // Handle Scientific Notation
+            showexponent: 'all'
+        },
+        annotations: [],
+        margin: { t: 50, l: 80, r: 30, b: 50 }
+    };
+    
+    // Configuration allows titles, axis labels, and annotations to be editable and draggable
+    let config = { 
+        editable: true,
+        edits: {
+            annotationPosition: true,
+            annotationTail: true,
+            annotationText: true,
+            axisTitleText: true,
+            titleText: true
+        },
+        displayModeBar: true,
+        responsive: true
+    };
+    
+    Plotly.newPlot(plotDiv, [], layout, config);
+
+    // -------------------------------------------------------------------------
+    // 2. Drag and Drop Handling
+    // -------------------------------------------------------------------------
+    const dropZone = document.getElementById('drop-zone');
+    
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('hover');
+    });
+    
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('hover'));
+    
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('hover');
+        let files = e.dataTransfer.files;
+        for (let file of files) {
+            processFile(file);
+        }
+    });
+
+    // -------------------------------------------------------------------------
+    // 3. Bulletproof Data Parsing & Plotting
+    // -------------------------------------------------------------------------
+    function processFile(file) {
+        let reader = new FileReader();
+        reader.onload = function(e) {
+            let text = e.target.result;
+            // Split by line breaks (handles Windows \r\n and Mac/Linux \n)
+            let lines = text.split(/\r?\n/);
+            
+            let xData = [];
+            let yData = [];
+            
+            for (let i = 0; i < lines.length; i++) {
+                // Remove trailing spaces and strip out any random quotation marks
+                let line = lines[i].replace(/["']/g, '').trim();
+                if (!line) continue;
+                
+                // Try to split the line by tabs or commas
+                let parts = line.split(/[\t,]+/);
+                
+                // Fallback: If no tabs/commas, try splitting by spaces
+                if (parts.length < 2) {
+                    parts = line.split(/\s+/);
+                }
+                
+                if (parts.length >= 2) {
+                    let xVal = parseFloat(parts[0].trim());
+                    let yVal = parseFloat(parts[1].trim());
+
+                    if (!isNaN(xVal) && !isNaN(yVal)) {
+                        xData.push(xVal);
+                        yData.push(yVal);
+                    }
+                }
+            }
+            
+            // Check if we successfully found anything
+            if (xData.length === 0) {
+                alert(`Could not extract valid numerical X/Y pairs from ${file.name}.`);
+                return;
+            }
+            
+            // Assign random color and plot
+            let randomColor = '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
+            addTrace(file.name, xData, yData, randomColor);
+        };
+        reader.readAsText(file); // Read fully
+    }
+
+    function addTrace(name, x, y, color) {
+        let trace = {
+            x: x,
+            y: y,
+            mode: 'lines',
+            name: name,
+            line: { color: color, width: 2 }
+        };
+        Plotly.addTraces(plotDiv, trace);
+        updateTraceList();
+    }
+
+    // -------------------------------------------------------------------------
+    // 4. Update Traces List & Colors
+    // -------------------------------------------------------------------------
+    function updateTraceList() {
+        const container = document.getElementById('trace-list');
+        container.innerHTML = ''; // clear current list
+        
+        let plotData = plotDiv.data;
+        if (!plotData || plotData.length === 0) {
+            container.innerHTML = '<i>No data loaded yet.</i>';
+            return;
+        }
+
+        plotData.forEach((trace, index) => {
+            let itemDiv = document.createElement('div');
+            itemDiv.className = 'trace-item';
+
+            let colorInput = document.createElement('input');
+            colorInput.type = 'color';
+            colorInput.value = trace.line.color;
+            
+            // Listen for color changes and update the specific trace
+            colorInput.addEventListener('input', (e) => {
+                Plotly.restyle(plotDiv, { 'line.color': e.target.value }, [index]);
+            });
+
+            let label = document.createElement('span');
+            label.innerText = trace.name;
+
+            itemDiv.appendChild(colorInput);
+            itemDiv.appendChild(label);
+            container.appendChild(itemDiv);
+        });
+    }
+
+    // -------------------------------------------------------------------------
+    // 5. User Controls (Clear, Labels, Download)
+    // -------------------------------------------------------------------------
+    
+    // Clear Plot
+    document.getElementById('clear-btn').addEventListener('click', () => {
+        Plotly.react(plotDiv, [], layout);
+        Plotly.relayout(plotDiv, { annotations: [] });
+        updateTraceList();
+    });
+    /*
+    document.getElementById('clear-btn').addEventListener('click', () => {
+        while (plotDiv.data.length > 0) {
+            Plotly.deleteTraces(plotDiv,);
+        }
+        // Also clear any custom labels added to the layout
+        Plotly.relayout(plotDiv, { annotations: [] });
+        updateTraceList();
+    });
+    */
+
+    // Add Dynamic Label
+    document.getElementById('add-label-btn').addEventListener('click', () => {
+        let text = document.getElementById('label-text').value;
+        let color = document.getElementById('label-color').value;
+        let size = document.getElementById('label-size').value;
+        
+        let newAnnotation = {
+            text: text,
+            font: { size: size, color: color },
+            showarrow: false,
+            // default position in the center of the plot initially
+            x: 0.5,
+            y: 0.5,
+            xref: 'paper',
+            yref: 'paper',
+            xanchor: 'center',
+            yanchor: 'middle',
+            captureevents: true
+        };
+        
+        let existingAnnotations = plotDiv.layout.annotations || [];
+        existingAnnotations.push(newAnnotation);
+        Plotly.relayout(plotDiv, { annotations: existingAnnotations });
+    });
+
+    // Download / Save Image
+    document.getElementById('download-btn').addEventListener('click', () => {
+        const rect = plotDiv.getBoundingClientRect();
+
+        Plotly.downloadImage(plotDiv, {
+            format: 'png',
+            width: rect.width,
+            height: rect.height,
+            scale: 2,  // or 3 for even sharper
+            filename: 'plasma_measurements'
+        });
+    });
+
+</script>
+</body>
+</html>
