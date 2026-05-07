@@ -150,6 +150,43 @@
             margin-bottom: 6px;
         }
         #plotly-div { width: 100%; height: 620px; }
+        #table-container {
+            display: none;
+            overflow: auto;
+            max-height: 620px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        #data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+        #data-table th {
+            background: #007bff;
+            color: white;
+            padding: 7px 10px;
+            text-align: left;
+            cursor: pointer;
+            white-space: nowrap;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            user-select: none;
+        }
+        #data-table th:hover { background: #0056b3; }
+        #data-table th.sort-asc::after  { content: ' ▲'; }
+        #data-table th.sort-desc::after { content: ' ▼'; }
+        #data-table td {
+            padding: 5px 10px;
+            border-bottom: 1px solid #f0f0f0;
+            white-space: nowrap;
+            max-width: 220px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        #data-table tr:nth-child(even) { background: #f9f9f9; }
+        #data-table tr:hover { background: #e8f4ff; }
         #element-count { text-align: right; font-size: 12px; color: #888; margin-top: 6px; }
     </style>
 </head>
@@ -162,6 +199,7 @@
         <label><input type="radio" name="chartType" value="scatter" checked> Scatter Plot</label>
         <label><input type="radio" name="chartType" value="bar"> Bar Chart</label>
         <label><input type="radio" name="chartType" value="heatmap"> Periodic Table Heatmap</label>
+        <label><input type="radio" name="chartType" value="table"> Table</label>
     </div>
 
     <!-- Filters -->
@@ -212,6 +250,7 @@
 
     <div id="status-msg">Loading Element_Database.csv…</div>
     <div id="plotly-div"></div>
+    <div id="table-container"><table id="data-table"></table></div>
     <div id="element-count"></div>
 </div>
 
@@ -301,7 +340,10 @@ const PT_COORDS = {
 
 let elements = [];
 let SCALAR_COLS = [];
+let DISPLAY_COLS = [];
 let ALL_GROUPS = [];
+let tableSortCol = 'Atomic Number';
+let tableSortDir = 1;
 let filterState = {
     searchText: '',
     standardState: '',
@@ -345,6 +387,8 @@ function processData(rawRows) {
         !CATEGORICAL_COLS.has(col) &&
         !IDENTITY_COLS.has(col)
     );
+    // All columns in CSV order for the table view (skip the unnamed pandas index)
+    DISPLAY_COLS = allCols.filter(col => col !== '');
 
     const seenAn = {};
     const result = [];
@@ -609,6 +653,69 @@ function buildHeatmapTraces(filtered, prop) {
     return [placeholderTrace, grayTrace, coloredTrace];
 }
 
+// ─── Table Builder ────────────────────────────────────────────────────────────
+
+function getCellValue(el, col) {
+    if (ARRAY_COLS.has(col)) {
+        const arr = el.arrays[col];
+        if (!arr || arr.length === 0) return '—';
+        const preview = arr.slice(0, 4).map(formatVal).join(', ');
+        return `[${preview}${arr.length > 4 ? ', …' : ''}]`;
+    }
+    if (SCALAR_COLS.includes(col)) {
+        const v = el.scalars[col];
+        return isNaN(v) ? '—' : formatVal(v);
+    }
+    switch (col) {
+        case 'Atomic Number':          return el.atomicNumber;
+        case 'Symbol':                 return el.symbol;
+        case 'Name':                   return el.name;
+        case 'Group Block':            return el.groupBlock || '—';
+        case 'Standard State':         return el.standardState || '—';
+        case 'Electron Configuration': return el.electronConfig || '—';
+        case 'Oxidation States':       return el.oxidationStates || '—';
+        default:                       return '—';
+    }
+}
+
+function buildTable(filtered) {
+    const sorted = [...filtered].sort((a, b) => {
+        if (SCALAR_COLS.includes(tableSortCol)) {
+            const va = a.scalars[tableSortCol];
+            const vb = b.scalars[tableSortCol];
+            if (isNaN(va) && isNaN(vb)) return 0;
+            if (isNaN(va)) return 1;
+            if (isNaN(vb)) return -1;
+            return (va - vb) * tableSortDir;
+        }
+        const va = String(getCellValue(a, tableSortCol));
+        const vb = String(getCellValue(b, tableSortCol));
+        return va.localeCompare(vb) * tableSortDir;
+    });
+
+    let thead = '<thead><tr>';
+    for (const col of DISPLAY_COLS) {
+        const cls = col === tableSortCol
+            ? (tableSortDir === 1 ? 'sort-asc' : 'sort-desc')
+            : '';
+        thead += `<th class="${cls}" data-col="${col}" title="Sort by ${col}">${col}</th>`;
+    }
+    thead += '</tr></thead>';
+
+    let tbody = '<tbody>';
+    for (const el of sorted) {
+        tbody += '<tr>';
+        for (const col of DISPLAY_COLS) {
+            const val = getCellValue(el, col);
+            tbody += `<td title="${val}">${val}</td>`;
+        }
+        tbody += '</tr>';
+    }
+    tbody += '</tbody>';
+
+    return thead + tbody;
+}
+
 // ─── Layout Builders ──────────────────────────────────────────────────────────
 
 function buildScatterLayout(xProp, yProp) {
@@ -672,31 +779,52 @@ function render() {
     const filtered = getFilteredElements();
     const chartType = document.querySelector('input[name="chartType"]:checked').value;
 
-    let traces, layout;
-    if (chartType === 'scatter') {
-        const xProp = document.getElementById('scatter-x').value;
-        const yProp = document.getElementById('scatter-y').value;
-        traces = buildScatterTraces(filtered, xProp, yProp);
-        layout = buildScatterLayout(xProp, yProp);
-    } else if (chartType === 'bar') {
-        const prop = document.getElementById('bar-prop').value;
-        traces = buildBarTraces(filtered, prop);
-        layout = buildBarLayout(prop);
-    } else {
-        const prop = document.getElementById('heatmap-prop').value;
-        traces = buildHeatmapTraces(filtered, prop);
-        layout = buildHeatmapLayout();
-    }
+    const plotDiv  = document.getElementById('plotly-div');
+    const tableDiv = document.getElementById('table-container');
 
-    if (isFirstRender) {
-        Plotly.newPlot('plotly-div', traces, layout, PLOTLY_CONFIG);
-        isFirstRender = false;
+    if (chartType === 'table') {
+        plotDiv.style.display  = 'none';
+        tableDiv.style.display = 'block';
+        document.getElementById('data-table').innerHTML = buildTable(filtered);
+        // Wire sort clicks on newly rendered headers
+        document.querySelectorAll('#data-table th').forEach(th => {
+            th.addEventListener('click', () => {
+                const col = th.dataset.col;
+                if (tableSortCol === col) tableSortDir *= -1;
+                else { tableSortCol = col; tableSortDir = 1; }
+                render();
+            });
+        });
     } else {
-        Plotly.react('plotly-div', traces, layout, PLOTLY_CONFIG);
+        plotDiv.style.display  = 'block';
+        tableDiv.style.display = 'none';
+
+        let traces, layout;
+        if (chartType === 'scatter') {
+            const xProp = document.getElementById('scatter-x').value;
+            const yProp = document.getElementById('scatter-y').value;
+            traces = buildScatterTraces(filtered, xProp, yProp);
+            layout = buildScatterLayout(xProp, yProp);
+        } else if (chartType === 'bar') {
+            const prop = document.getElementById('bar-prop').value;
+            traces = buildBarTraces(filtered, prop);
+            layout = buildBarLayout(prop);
+        } else {
+            const prop = document.getElementById('heatmap-prop').value;
+            traces = buildHeatmapTraces(filtered, prop);
+            layout = buildHeatmapLayout();
+        }
+
+        if (isFirstRender) {
+            Plotly.newPlot('plotly-div', traces, layout, PLOTLY_CONFIG);
+            isFirstRender = false;
+        } else {
+            Plotly.react('plotly-div', traces, layout, PLOTLY_CONFIG);
+        }
     }
 
     const uniqueAns = new Set(filtered.map(el => el.atomicNumber)).size;
-    const totalAns = new Set(elements.map(el => el.atomicNumber)).size;
+    const totalAns  = new Set(elements.map(el => el.atomicNumber)).size;
     document.getElementById('element-count').textContent =
         `Showing ${uniqueAns} of ${totalAns} unique elements (${filtered.length} rows total)`;
 }
@@ -706,12 +834,15 @@ function render() {
 function getActiveProp() {
     const chartType = document.querySelector('input[name="chartType"]:checked').value;
     if (chartType === 'scatter') return document.getElementById('scatter-y').value;
-    if (chartType === 'bar') return document.getElementById('bar-prop').value;
-    return document.getElementById('heatmap-prop').value;
+    if (chartType === 'bar')     return document.getElementById('bar-prop').value;
+    if (chartType === 'heatmap') return document.getElementById('heatmap-prop').value;
+    return SCALAR_COLS[0]; // table — range slider still uses first scalar
 }
 
 function updateAxisPanelVisibility() {
     const chartType = document.querySelector('input[name="chartType"]:checked').value;
+    const isTable = chartType === 'table';
+    document.getElementById('axis-panel').style.display   = isTable ? 'none' : 'flex';
     document.getElementById('scatter-controls').style.display =
         chartType === 'scatter' ? 'flex' : 'none';
     document.getElementById('bar-controls').style.display =
