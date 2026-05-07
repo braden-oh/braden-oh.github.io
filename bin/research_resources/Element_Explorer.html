@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Element Database Explorer</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f9f9f9;
+        }
+        h1 { text-align: center; margin: 0 0 14px 0; font-size: 22px; }
+        .container {
+            max-width: 1400px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        #chart-type-panel {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            padding: 10px;
+            background: #f1f1f1;
+            border-radius: 6px;
+            margin-bottom: 12px;
+        }
+        #chart-type-panel label {
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        #chart-type-panel input[type="radio"] { cursor: pointer; }
+        #filter-panel {
+            background: #f8f8f8;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 12px 14px;
+            margin-bottom: 12px;
+        }
+        .filter-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+        .filter-row:last-child { margin-bottom: 0; }
+        .filter-label { font-weight: bold; font-size: 13px; color: #555; white-space: nowrap; }
+        #search-input {
+            padding: 5px 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 13px;
+            width: 140px;
+        }
+        #search-clear {
+            padding: 4px 8px;
+            border: none;
+            background: #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        #search-clear:hover { background: #bbb; }
+        #state-filter {
+            padding: 5px 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        .btn-small {
+            padding: 4px 10px;
+            border: 1px solid #007bff;
+            background: white;
+            color: #007bff;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .btn-small:hover { background: #e6f0ff; }
+        #group-checkboxes { display: flex; flex-wrap: wrap; gap: 6px; }
+        .group-label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+            cursor: pointer;
+            padding: 3px 9px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            background: white;
+            white-space: nowrap;
+            user-select: none;
+        }
+        .group-label:hover { background: #f0f0f0; }
+        .group-swatch {
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+        #range-filter-row { align-items: center; gap: 8px; }
+        #range-label { font-size: 12px; color: #555; white-space: nowrap; max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
+        .range-val { font-size: 12px; color: #333; min-width: 72px; text-align: center; font-family: monospace; }
+        #range-min-input, #range-max-input { width: 170px; cursor: pointer; }
+        #axis-panel {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 10px 12px;
+            background: #f1f1f1;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+        .axis-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .axis-controls label { font-size: 13px; display: flex; align-items: center; gap: 5px; }
+        .axis-controls select {
+            padding: 5px 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 13px;
+            max-width: 280px;
+        }
+        #save-png {
+            padding: 7px 16px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            margin-left: auto;
+        }
+        #save-png:hover { background: #0056b3; }
+        #status-msg {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            min-height: 20px;
+            margin-bottom: 6px;
+        }
+        #plotly-div { width: 100%; height: 620px; }
+        #element-count { text-align: right; font-size: 12px; color: #888; margin-top: 6px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Element Database Explorer</h1>
+
+    <!-- Chart type selector -->
+    <div id="chart-type-panel">
+        <label><input type="radio" name="chartType" value="scatter" checked> Scatter Plot</label>
+        <label><input type="radio" name="chartType" value="bar"> Bar Chart</label>
+        <label><input type="radio" name="chartType" value="heatmap"> Periodic Table Heatmap</label>
+    </div>
+
+    <!-- Filters -->
+    <div id="filter-panel">
+        <div class="filter-row">
+            <span class="filter-label">Search:</span>
+            <input type="text" id="search-input" placeholder="Name or symbol…">
+            <button id="search-clear" title="Clear">✕</button>
+            <span class="filter-label">State:</span>
+            <select id="state-filter">
+                <option value="">All</option>
+                <option value="Solid">Solid</option>
+                <option value="Liquid">Liquid</option>
+                <option value="Gas">Gas</option>
+                <option value="Expected to be a Solid">Expected Solid</option>
+                <option value="Expected to be a Gas">Expected Gas</option>
+            </select>
+            <button class="btn-small" id="select-all-groups">All Groups</button>
+            <button class="btn-small" id="deselect-all-groups">No Groups</button>
+        </div>
+        <div class="filter-row">
+            <span class="filter-label">Groups:</span>
+            <div id="group-checkboxes"></div>
+        </div>
+        <div class="filter-row" id="range-filter-row">
+            <span id="range-label" class="filter-label">Range:</span>
+            <span class="range-val" id="range-min-display">—</span>
+            <input type="range" id="range-min-input" disabled>
+            <input type="range" id="range-max-input" disabled>
+            <span class="range-val" id="range-max-display">—</span>
+        </div>
+    </div>
+
+    <!-- Axis / property controls -->
+    <div id="axis-panel">
+        <div id="scatter-controls" class="axis-controls">
+            <label>X: <select id="scatter-x"></select></label>
+            <label>Y: <select id="scatter-y"></select></label>
+        </div>
+        <div id="bar-controls" class="axis-controls" style="display:none">
+            <label>Property: <select id="bar-prop"></select></label>
+        </div>
+        <div id="heatmap-controls" class="axis-controls" style="display:none">
+            <label>Property: <select id="heatmap-prop"></select></label>
+        </div>
+        <button id="save-png">&#10515; Save PNG</button>
+    </div>
+
+    <div id="status-msg">Loading Element_Database.csv…</div>
+    <div id="plotly-div"></div>
+    <div id="element-count"></div>
+</div>
+
+<script>
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const ARRAY_COLS = new Set([
+    'Vapor Ref Temperatures [K]',
+    'Vapor Ref Pressures [Pa]',
+    'Clausius Errors',
+]);
+
+const CATEGORICAL_COLS = new Set([
+    'Electron Configuration',
+    'Oxidation States',
+    'Standard State',
+    'Group Block',
+]);
+
+const IDENTITY_COLS = new Set(['', 'Symbol', 'Name']);
+// Atomic Number left out so it becomes graphable
+
+const GROUP_COLORS = {
+    'Alkali metal':          '#e74c3c',
+    'Alkaline earth metal':  '#e67e22',
+    'Transition metal':      '#3498db',
+    'Post-transition metal': '#2ecc71',
+    'Metalloid':             '#9b59b6',
+    'Nonmetal':              '#1abc9c',
+    'Halogen':               '#f39c12',
+    'Noble gas':             '#95a5a6',
+    'Lanthanide':            '#e91e63',
+    'Actinide':              '#607d8b',
+};
+
+// Periodic table grid: atomicNumber -> {period, group}
+// Lanthanides (57–71) in row 8, Actinides (89–103) in row 9
+const PT_COORDS = {
+    1:{period:1,group:1},   2:{period:1,group:18},
+    3:{period:2,group:1},   4:{period:2,group:2},
+    5:{period:2,group:13},  6:{period:2,group:14},  7:{period:2,group:15},
+    8:{period:2,group:16},  9:{period:2,group:17},  10:{period:2,group:18},
+    11:{period:3,group:1},  12:{period:3,group:2},
+    13:{period:3,group:13}, 14:{period:3,group:14}, 15:{period:3,group:15},
+    16:{period:3,group:16}, 17:{period:3,group:17}, 18:{period:3,group:18},
+    19:{period:4,group:1},  20:{period:4,group:2},
+    21:{period:4,group:3},  22:{period:4,group:4},  23:{period:4,group:5},
+    24:{period:4,group:6},  25:{period:4,group:7},  26:{period:4,group:8},
+    27:{period:4,group:9},  28:{period:4,group:10}, 29:{period:4,group:11},
+    30:{period:4,group:12}, 31:{period:4,group:13}, 32:{period:4,group:14},
+    33:{period:4,group:15}, 34:{period:4,group:16}, 35:{period:4,group:17},
+    36:{period:4,group:18},
+    37:{period:5,group:1},  38:{period:5,group:2},
+    39:{period:5,group:3},  40:{period:5,group:4},  41:{period:5,group:5},
+    42:{period:5,group:6},  43:{period:5,group:7},  44:{period:5,group:8},
+    45:{period:5,group:9},  46:{period:5,group:10}, 47:{period:5,group:11},
+    48:{period:5,group:12}, 49:{period:5,group:13}, 50:{period:5,group:14},
+    51:{period:5,group:15}, 52:{period:5,group:16}, 53:{period:5,group:17},
+    54:{period:5,group:18},
+    55:{period:6,group:1},  56:{period:6,group:2},
+    // Lanthanides → row 8
+    57:{period:8,group:3},  58:{period:8,group:4},  59:{period:8,group:5},
+    60:{period:8,group:6},  61:{period:8,group:7},  62:{period:8,group:8},
+    63:{period:8,group:9},  64:{period:8,group:10}, 65:{period:8,group:11},
+    66:{period:8,group:12}, 67:{period:8,group:13}, 68:{period:8,group:14},
+    69:{period:8,group:15}, 70:{period:8,group:16}, 71:{period:8,group:17},
+    72:{period:6,group:4},  73:{period:6,group:5},  74:{period:6,group:6},
+    75:{period:6,group:7},  76:{period:6,group:8},  77:{period:6,group:9},
+    78:{period:6,group:10}, 79:{period:6,group:11}, 80:{period:6,group:12},
+    81:{period:6,group:13}, 82:{period:6,group:14}, 83:{period:6,group:15},
+    84:{period:6,group:16}, 85:{period:6,group:17}, 86:{period:6,group:18},
+    87:{period:7,group:1},  88:{period:7,group:2},
+    // Actinides → row 9
+    89:{period:9,group:3},  90:{period:9,group:4},  91:{period:9,group:5},
+    92:{period:9,group:6},  93:{period:9,group:7},  94:{period:9,group:8},
+    95:{period:9,group:9},  96:{period:9,group:10}, 97:{period:9,group:11},
+    98:{period:9,group:12}, 99:{period:9,group:13}, 100:{period:9,group:14},
+    101:{period:9,group:15},102:{period:9,group:16},103:{period:9,group:17},
+    104:{period:7,group:4}, 105:{period:7,group:5}, 106:{period:7,group:6},
+    107:{period:7,group:7}, 108:{period:7,group:8}, 109:{period:7,group:9},
+    110:{period:7,group:10},111:{period:7,group:11},112:{period:7,group:12},
+    113:{period:7,group:13},114:{period:7,group:14},115:{period:7,group:15},
+    116:{period:7,group:16},117:{period:7,group:17},118:{period:7,group:18},
+};
+
+// ─── State ────────────────────────────────────────────────────────────────────
+
+let elements = [];
+let SCALAR_COLS = [];
+let ALL_GROUPS = [];
+let filterState = {
+    searchText: '',
+    standardState: '',
+    enabledGroups: new Set(),
+    rangeMin: -Infinity,
+    rangeMax: Infinity,
+    rangeProp: null,
+};
+let isFirstRender = true;
+
+// ─── Utilities ────────────────────────────────────────────────────────────────
+
+function parseArrayField(str) {
+    if (!str || str.trim() === '') return [];
+    const inner = str.trim().replace(/^\[|\]$/g, '');
+    if (!inner) return [];
+    return inner.split(',').map(s => {
+        const v = parseFloat(s.trim());
+        return isNaN(v) ? s.trim() : v;
+    });
+}
+
+function formatVal(v) {
+    if (v === undefined || v === null || (typeof v === 'number' && isNaN(v))) return 'N/A';
+    if (typeof v === 'number') {
+        if (v === 0) return '0';
+        if (Math.abs(v) >= 1e5 || Math.abs(v) < 0.001) return v.toExponential(3);
+        return parseFloat(v.toPrecision(5)).toString();
+    }
+    return String(v);
+}
+
+// ─── Data Processing ─────────────────────────────────────────────────────────
+
+function processData(rawRows) {
+    if (!rawRows.length) return [];
+    const allCols = Object.keys(rawRows[0]);
+
+    SCALAR_COLS = allCols.filter(col =>
+        !ARRAY_COLS.has(col) &&
+        !CATEGORICAL_COLS.has(col) &&
+        !IDENTITY_COLS.has(col)
+    );
+
+    const seenAn = {};
+    const result = [];
+
+    for (const row of rawRows) {
+        const an = parseInt(row['Atomic Number']);
+        if (isNaN(an)) continue;
+
+        seenAn[an] = (seenAn[an] || 0) + 1;
+        const idx = seenAn[an];
+        const isSecondary = idx > 1;
+        const baseName = (row['Name'] || '').trim();
+
+        const el = {
+            atomicNumber: an,
+            symbol: (row['Symbol'] || '').trim(),
+            name: isSecondary ? `${baseName} (${idx})` : baseName,
+            displayName: baseName,
+            groupBlock: (row['Group Block'] || '').trim(),
+            standardState: (row['Standard State'] || '').trim(),
+            electronConfig: (row['Electron Configuration'] || '').trim(),
+            oxidationStates: (row['Oxidation States'] || '').trim(),
+            scalars: {},
+            arrays: {},
+            isAllotrope: isSecondary,
+            allotropeIndex: idx,
+        };
+
+        for (const col of SCALAR_COLS) {
+            const raw = (row[col] != null ? row[col] : '').toString().trim();
+            el.scalars[col] = raw === '' ? NaN : parseFloat(raw);
+        }
+
+        for (const col of ARRAY_COLS) {
+            el.arrays[col] = parseArrayField(row[col]);
+        }
+
+        result.push(el);
+    }
+
+    return result;
+}
+
+// ─── Filtering ────────────────────────────────────────────────────────────────
+
+function getFilteredElements() {
+    return elements.filter(el => {
+        if (filterState.searchText) {
+            const q = filterState.searchText.toLowerCase();
+            if (!el.name.toLowerCase().includes(q) && !el.symbol.toLowerCase().includes(q))
+                return false;
+        }
+        if (filterState.standardState && el.standardState !== filterState.standardState)
+            return false;
+        if (!filterState.enabledGroups.has(el.groupBlock))
+            return false;
+        if (filterState.rangeProp) {
+            const val = el.scalars[filterState.rangeProp];
+            if (isNaN(val)) return false;
+            if (val < filterState.rangeMin || val > filterState.rangeMax) return false;
+        }
+        return true;
+    });
+}
+
+// ─── Hover Text ───────────────────────────────────────────────────────────────
+
+function buildHoverText(el, xProp, yProp) {
+    const lines = [
+        `<b>${el.name}</b> (${el.symbol})`,
+        `Z = ${el.atomicNumber}`,
+        `Group: ${el.groupBlock}`,
+        `State: ${el.standardState}`,
+    ];
+    if (xProp && xProp !== yProp) lines.push(`${xProp}: ${formatVal(el.scalars[xProp])}`);
+    if (yProp) lines.push(`${yProp}: ${formatVal(el.scalars[yProp])}`);
+    for (const [col, vals] of Object.entries(el.arrays)) {
+        if (vals.length > 0) {
+            const preview = vals.slice(0, 5).map(formatVal).join(', ');
+            lines.push(`${col}: [${preview}${vals.length > 5 ? ', …' : ''}]`);
+        }
+    }
+    return lines.join('<br>');
+}
+
+// ─── Chart Builders ───────────────────────────────────────────────────────────
+
+function buildScatterTraces(filtered, xProp, yProp) {
+    const byGroup = {};
+    for (const el of filtered) {
+        const vx = el.scalars[xProp];
+        const vy = el.scalars[yProp];
+        if (isNaN(vx) || isNaN(vy)) continue;
+        if (!byGroup[el.groupBlock]) byGroup[el.groupBlock] = [];
+        byGroup[el.groupBlock].push(el);
+    }
+    return Object.entries(byGroup).map(([group, els]) => ({
+        type: 'scatter',
+        mode: 'markers',
+        name: group,
+        x: els.map(el => el.scalars[xProp]),
+        y: els.map(el => el.scalars[yProp]),
+        text: els.map(el => buildHoverText(el, xProp, yProp)),
+        hoverinfo: 'text',
+        marker: {
+            color: GROUP_COLORS[group] || '#666',
+            size: 9,
+            opacity: 0.85,
+        },
+    }));
+}
+
+function buildBarTraces(filtered, prop) {
+    const eligible = filtered
+        .filter(el => !isNaN(el.scalars[prop]))
+        .sort((a, b) => a.scalars[prop] - b.scalars[prop]);
+
+    const mainTrace = {
+        type: 'bar',
+        x: eligible.map(el => el.symbol),
+        y: eligible.map(el => el.scalars[prop]),
+        text: eligible.map(el => buildHoverText(el, null, prop)),
+        hoverinfo: 'text',
+        marker: { color: eligible.map(el => GROUP_COLORS[el.groupBlock] || '#666') },
+        showlegend: false,
+    };
+
+    const presentGroups = [...new Set(eligible.map(el => el.groupBlock))];
+    const legendTraces = presentGroups.map(group => ({
+        type: 'scatter',
+        mode: 'markers',
+        name: group,
+        x: [null],
+        y: [null],
+        marker: { color: GROUP_COLORS[group] || '#666', size: 10 },
+    }));
+
+    return [mainTrace, ...legendTraces];
+}
+
+function buildHeatmapTraces(filtered, prop) {
+    // First occurrence per atomic number (canonical element)
+    const anToEl = {};
+    const anExtra = {};
+    for (const el of elements) {
+        if (!anToEl[el.atomicNumber]) {
+            anToEl[el.atomicNumber] = el;
+            anExtra[el.atomicNumber] = [];
+        } else {
+            anExtra[el.atomicNumber].push(el);
+        }
+    }
+
+    const filteredAns = new Set(filtered.map(el => el.atomicNumber));
+
+    // Stable color scale from global (unfiltered) values
+    const allVals = Object.values(anToEl)
+        .map(el => el.scalars[prop])
+        .filter(v => !isNaN(v));
+    const cmin = allVals.length ? Math.min(...allVals) : 0;
+    const cmax = allVals.length ? Math.max(...allVals) : 1;
+
+    const cX = [], cY = [], cText = [], cColor = [], cHover = [];
+    const gX = [], gY = [], gText = [], gHover = [];
+
+    for (const [anStr, coords] of Object.entries(PT_COORDS)) {
+        const an = parseInt(anStr);
+        const el = anToEl[an];
+        if (!el) continue;
+
+        const val = el.scalars[prop];
+        const hasVal = !isNaN(val);
+        const inFilter = filteredAns.has(an);
+
+        const hoverLines = [
+            `<b>${el.displayName}</b> (${el.symbol})`,
+            `Z = ${an}`,
+            `${prop}: ${hasVal ? formatVal(val) : 'N/A'}`,
+        ];
+        if (anExtra[an] && anExtra[an].length > 0) {
+            const alt = anExtra[an][0];
+            const altVal = alt.scalars[prop];
+            if (!isNaN(altVal)) hoverLines.push(`Allotrope: ${formatVal(altVal)}`);
+        }
+        if (!inFilter) hoverLines.push('(filtered out)');
+        const hover = hoverLines.join('<br>');
+
+        if (inFilter && hasVal) {
+            cX.push(coords.group); cY.push(-coords.period);
+            cText.push(el.symbol); cColor.push(val); cHover.push(hover);
+        } else {
+            gX.push(coords.group); gY.push(-coords.period);
+            gText.push(el.symbol); gHover.push(hover);
+        }
+    }
+
+    const grayTrace = {
+        type: 'scatter',
+        mode: 'markers+text',
+        x: gX, y: gY,
+        text: gText,
+        textposition: 'middle center',
+        textfont: { size: 8, color: '#aaa' },
+        hovertext: gHover,
+        hoverinfo: 'text',
+        marker: {
+            symbol: 'square',
+            size: 30,
+            color: '#ddd',
+            line: { color: '#ccc', width: 1 },
+        },
+        showlegend: false,
+    };
+
+    const coloredTrace = {
+        type: 'scatter',
+        mode: 'markers+text',
+        x: cX, y: cY,
+        text: cText,
+        textposition: 'middle center',
+        textfont: { size: 8, color: '#fff' },
+        hovertext: cHover,
+        hoverinfo: 'text',
+        marker: {
+            symbol: 'square',
+            size: 30,
+            color: cColor,
+            colorscale: 'Viridis',
+            showscale: true,
+            colorbar: {
+                title: { text: prop, font: { size: 10 } },
+                thickness: 14,
+                len: 0.85,
+            },
+            cmin: cmin,
+            cmax: cmax,
+            line: { color: '#fff', width: 1 },
+        },
+        showlegend: false,
+    };
+
+    // La* and Ac* placeholder cells
+    const placeholderTrace = {
+        type: 'scatter',
+        mode: 'markers+text',
+        x: [3, 3],
+        y: [-6, -7],
+        text: ['La*', 'Ac*'],
+        textposition: 'middle center',
+        textfont: { size: 8, color: '#aaa' },
+        hovertext: ['Lanthanides (rows below)', 'Actinides (rows below)'],
+        hoverinfo: 'text',
+        marker: {
+            symbol: 'square',
+            size: 30,
+            color: '#f0f0f0',
+            line: { color: '#bbb', width: 1 },
+        },
+        showlegend: false,
+    };
+
+    return [placeholderTrace, grayTrace, coloredTrace];
+}
+
+// ─── Layout Builders ──────────────────────────────────────────────────────────
+
+function buildScatterLayout(xProp, yProp) {
+    return {
+        title: { text: 'Click to edit title', font: { size: 16 } },
+        xaxis: { title: { text: xProp }, autorange: true },
+        yaxis: { title: { text: yProp }, autorange: true },
+        hovermode: 'closest',
+        legend: { title: { text: 'Group Block' } },
+        margin: { t: 60, l: 80, r: 30, b: 60 },
+    };
+}
+
+function buildBarLayout(prop) {
+    return {
+        title: { text: 'Click to edit title', font: { size: 16 } },
+        xaxis: { title: { text: 'Element' }, tickangle: -90, autorange: true },
+        yaxis: { title: { text: prop }, autorange: true },
+        hovermode: 'closest',
+        bargap: 0.1,
+        legend: { title: { text: 'Group Block' } },
+        margin: { t: 60, l: 80, r: 30, b: 110 },
+    };
+}
+
+function buildHeatmapLayout() {
+    return {
+        title: { text: 'Click to edit title', font: { size: 16 } },
+        xaxis: {
+            title: { text: 'Group' },
+            range: [0.3, 18.7],
+            dtick: 1,
+            showgrid: false,
+            zeroline: false,
+        },
+        yaxis: {
+            title: { text: 'Period' },
+            range: [-9.7, -0.3],
+            tickvals: [-1, -2, -3, -4, -5, -6, -7, -8, -9],
+            ticktext: ['1', '2', '3', '4', '5', '6', '7', 'Ln', 'An'],
+            showgrid: false,
+            zeroline: false,
+        },
+        hovermode: 'closest',
+        showlegend: false,
+        plot_bgcolor: '#f0f0f0',
+        margin: { t: 60, l: 60, r: 150, b: 50 },
+    };
+}
+
+// ─── Render ───────────────────────────────────────────────────────────────────
+
+const PLOTLY_CONFIG = {
+    editable: true,
+    edits: { titleText: true, axisTitleText: true, annotationText: true },
+    displayModeBar: true,
+    responsive: true,
+};
+
+function render() {
+    const filtered = getFilteredElements();
+    const chartType = document.querySelector('input[name="chartType"]:checked').value;
+
+    let traces, layout;
+    if (chartType === 'scatter') {
+        const xProp = document.getElementById('scatter-x').value;
+        const yProp = document.getElementById('scatter-y').value;
+        traces = buildScatterTraces(filtered, xProp, yProp);
+        layout = buildScatterLayout(xProp, yProp);
+    } else if (chartType === 'bar') {
+        const prop = document.getElementById('bar-prop').value;
+        traces = buildBarTraces(filtered, prop);
+        layout = buildBarLayout(prop);
+    } else {
+        const prop = document.getElementById('heatmap-prop').value;
+        traces = buildHeatmapTraces(filtered, prop);
+        layout = buildHeatmapLayout();
+    }
+
+    if (isFirstRender) {
+        Plotly.newPlot('plotly-div', traces, layout, PLOTLY_CONFIG);
+        isFirstRender = false;
+    } else {
+        Plotly.react('plotly-div', traces, layout, PLOTLY_CONFIG);
+    }
+
+    const uniqueAns = new Set(filtered.map(el => el.atomicNumber)).size;
+    const totalAns = new Set(elements.map(el => el.atomicNumber)).size;
+    document.getElementById('element-count').textContent =
+        `Showing ${uniqueAns} of ${totalAns} unique elements (${filtered.length} rows total)`;
+}
+
+// ─── UI Helpers ───────────────────────────────────────────────────────────────
+
+function getActiveProp() {
+    const chartType = document.querySelector('input[name="chartType"]:checked').value;
+    if (chartType === 'scatter') return document.getElementById('scatter-y').value;
+    if (chartType === 'bar') return document.getElementById('bar-prop').value;
+    return document.getElementById('heatmap-prop').value;
+}
+
+function updateAxisPanelVisibility() {
+    const chartType = document.querySelector('input[name="chartType"]:checked').value;
+    document.getElementById('scatter-controls').style.display =
+        chartType === 'scatter' ? 'flex' : 'none';
+    document.getElementById('bar-controls').style.display =
+        chartType === 'bar' ? 'flex' : 'none';
+    document.getElementById('heatmap-controls').style.display =
+        chartType === 'heatmap' ? 'flex' : 'none';
+}
+
+function updateRangeSliderBounds(propName) {
+    filterState.rangeProp = propName;
+    const values = elements.map(el => el.scalars[propName]).filter(v => !isNaN(v));
+
+    const minInput = document.getElementById('range-min-input');
+    const maxInput = document.getElementById('range-max-input');
+    const minDisplay = document.getElementById('range-min-display');
+    const maxDisplay = document.getElementById('range-max-display');
+    const label = document.getElementById('range-label');
+
+    const shortProp = propName.length > 35 ? propName.slice(0, 33) + '…' : propName;
+    label.textContent = `Range (${shortProp}):`;
+    label.title = propName;
+
+    if (values.length === 0) {
+        minInput.disabled = true;
+        maxInput.disabled = true;
+        minDisplay.textContent = '—';
+        maxDisplay.textContent = '—';
+        filterState.rangeMin = -Infinity;
+        filterState.rangeMax = Infinity;
+        return;
+    }
+
+    const globalMin = Math.min(...values);
+    const globalMax = Math.max(...values);
+    const step = globalMax > globalMin ? (globalMax - globalMin) / 1000 : 1;
+
+    minInput.disabled = false;
+    maxInput.disabled = false;
+    minInput.min = globalMin;
+    minInput.max = globalMax;
+    minInput.step = step;
+    minInput.value = globalMin;
+    maxInput.min = globalMin;
+    maxInput.max = globalMax;
+    maxInput.step = step;
+    maxInput.value = globalMax;
+
+    filterState.rangeMin = globalMin;
+    filterState.rangeMax = globalMax;
+    minDisplay.textContent = formatVal(globalMin);
+    maxDisplay.textContent = formatVal(globalMax);
+}
+
+function populateAxisDropdowns() {
+    const selects = ['scatter-x', 'scatter-y', 'bar-prop', 'heatmap-prop'];
+    for (const id of selects) {
+        const sel = document.getElementById(id);
+        sel.innerHTML = '';
+        for (const col of SCALAR_COLS) {
+            const opt = document.createElement('option');
+            opt.value = col;
+            opt.textContent = col;
+            sel.appendChild(opt);
+        }
+    }
+
+    const anIdx = SCALAR_COLS.indexOf('Atomic Number');
+    const ieIdx = SCALAR_COLS.indexOf('Ionization Energy [eV]');
+    const enIdx = SCALAR_COLS.indexOf('Electronegativity [Pauling]');
+
+    if (anIdx >= 0) document.getElementById('scatter-x').selectedIndex = anIdx;
+    if (ieIdx >= 0) document.getElementById('scatter-y').selectedIndex = ieIdx;
+    if (ieIdx >= 0) document.getElementById('bar-prop').selectedIndex = ieIdx;
+    if (enIdx >= 0) document.getElementById('heatmap-prop').selectedIndex = enIdx;
+}
+
+function buildGroupCheckboxes() {
+    const groups = [...new Set(elements.map(el => el.groupBlock).filter(Boolean))].sort();
+    ALL_GROUPS = groups;
+    filterState.enabledGroups = new Set(groups);
+
+    const container = document.getElementById('group-checkboxes');
+    container.innerHTML = '';
+    for (const group of groups) {
+        const label = document.createElement('label');
+        label.className = 'group-label';
+
+        const swatch = document.createElement('span');
+        swatch.className = 'group-swatch';
+        swatch.style.backgroundColor = GROUP_COLORS[group] || '#666';
+
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.value = group;
+        cb.checked = true;
+        cb.style.display = 'none';
+
+        label.appendChild(swatch);
+        label.appendChild(cb);
+        label.appendChild(document.createTextNode(group));
+        label.style.borderColor = GROUP_COLORS[group] || '#ddd';
+        container.appendChild(label);
+    }
+}
+
+// ─── Event Wiring ─────────────────────────────────────────────────────────────
+
+function wireEvents() {
+    document.querySelectorAll('input[name="chartType"]').forEach(radio => {
+        radio.addEventListener('change', () => {
+            updateAxisPanelVisibility();
+            isFirstRender = true;
+            updateRangeSliderBounds(getActiveProp());
+            render();
+        });
+    });
+
+    document.getElementById('scatter-x').addEventListener('change', () => render());
+    document.getElementById('scatter-y').addEventListener('change', () => {
+        updateRangeSliderBounds(document.getElementById('scatter-y').value);
+        render();
+    });
+
+    ['bar-prop', 'heatmap-prop'].forEach(id => {
+        document.getElementById(id).addEventListener('change', () => {
+            updateRangeSliderBounds(document.getElementById(id).value);
+            render();
+        });
+    });
+
+    document.getElementById('search-input').addEventListener('input', e => {
+        filterState.searchText = e.target.value;
+        render();
+    });
+    document.getElementById('search-clear').addEventListener('click', () => {
+        filterState.searchText = '';
+        document.getElementById('search-input').value = '';
+        render();
+    });
+
+    document.getElementById('state-filter').addEventListener('change', e => {
+        filterState.standardState = e.target.value;
+        render();
+    });
+
+    document.getElementById('group-checkboxes').addEventListener('click', e => {
+        const label = e.target.closest('.group-label');
+        if (!label) return;
+        e.preventDefault(); // stop default label activation so we don't double-toggle
+        const cb = label.querySelector('input[type="checkbox"]');
+        cb.checked = !cb.checked;
+        if (cb.checked) filterState.enabledGroups.add(cb.value);
+        else filterState.enabledGroups.delete(cb.value);
+        label.style.opacity = cb.checked ? '1' : '0.4';
+        render();
+    });
+
+    document.getElementById('select-all-groups').addEventListener('click', () => {
+        filterState.enabledGroups = new Set(ALL_GROUPS);
+        document.querySelectorAll('#group-checkboxes input[type="checkbox"]').forEach(cb => {
+            cb.checked = true;
+            cb.closest('.group-label').style.opacity = '1';
+        });
+        render();
+    });
+    document.getElementById('deselect-all-groups').addEventListener('click', () => {
+        filterState.enabledGroups = new Set();
+        document.querySelectorAll('#group-checkboxes input[type="checkbox"]').forEach(cb => {
+            cb.checked = false;
+            cb.closest('.group-label').style.opacity = '0.4';
+        });
+        render();
+    });
+
+    document.getElementById('range-min-input').addEventListener('input', e => {
+        const minVal = parseFloat(e.target.value);
+        const maxVal = parseFloat(document.getElementById('range-max-input').value);
+        if (minVal > maxVal) { e.target.value = maxVal; return; }
+        filterState.rangeMin = minVal;
+        document.getElementById('range-min-display').textContent = formatVal(minVal);
+        render();
+    });
+    document.getElementById('range-max-input').addEventListener('input', e => {
+        const maxVal = parseFloat(e.target.value);
+        const minVal = parseFloat(document.getElementById('range-min-input').value);
+        if (maxVal < minVal) { e.target.value = minVal; return; }
+        filterState.rangeMax = maxVal;
+        document.getElementById('range-max-display').textContent = formatVal(maxVal);
+        render();
+    });
+
+    document.getElementById('save-png').addEventListener('click', () => {
+        Plotly.downloadImage(document.getElementById('plotly-div'), {
+            format: 'png',
+            width: 1400,
+            height: 700,
+            scale: 2,
+            filename: 'element_explorer',
+        });
+    });
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+
+document.addEventListener('DOMContentLoaded', () => {
+    const statusEl = document.getElementById('status-msg');
+
+    Papa.parse('Element_Database.csv', {
+        download: true,
+        header: true,
+        skipEmptyLines: true,
+        dynamicTyping: false,
+        complete: results => {
+            elements = processData(results.data);
+            if (!elements.length) {
+                statusEl.textContent = 'No data found in Element_Database.csv.';
+                return;
+            }
+            buildGroupCheckboxes();
+            populateAxisDropdowns();
+            updateRangeSliderBounds(
+                SCALAR_COLS.find(c => c === 'Ionization Energy [eV]') || SCALAR_COLS[0]
+            );
+            updateAxisPanelVisibility();
+            wireEvents();
+            statusEl.textContent = '';
+            render();
+        },
+        error: err => {
+            statusEl.textContent = 'Error loading CSV: ' + (err.message || err);
+            statusEl.style.color = 'red';
+        },
+    });
+});
+</script>
+</body>
+</html>
