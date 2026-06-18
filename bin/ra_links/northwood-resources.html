@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Northwood ResStaff Resources</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Tokens ─────────────────────────────────────────────── */
+    :root {
+      --navy:    #00274C;
+      --maize:   #FFCB05;
+      --bg:      #EDF0F5;
+      --surface: #FFFFFF;
+      --text:    #1A2535;
+      --muted:   #6B7585;
+      --border:  #DDE3EC;
+      --radius:  10px;
+      --shadow:  0 1px 3px rgba(0,0,0,.08), 0 4px 12px rgba(0,0,0,.05);
+      --shadow-hover: 0 4px 8px rgba(0,0,0,.12), 0 8px 24px rgba(0,0,0,.08);
+      --transition: .18s ease;
+
+      --c-community: #1D6FA4;
+      --c-duty:      #C0392B;
+      --c-docs:      #7B3F9E;
+      --c-facilities:#1F7A4D;
+      --c-housing:   #B8610A;
+      --c-campus:    #0D6E6E;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    header {
+      background: var(--navy);
+      padding: 1.5rem 2rem 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 12px rgba(0,0,0,.25);
+    }
+    .header-badge {
+      background: var(--maize);
+      color: var(--navy);
+      font-weight: 700;
+      font-size: .75rem;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      padding: .3rem .65rem;
+      border-radius: 5px;
+      white-space: nowrap;
+    }
+    header h1 {
+      color: #fff;
+      font-size: 1.2rem;
+      font-weight: 600;
+      letter-spacing: -.01em;
+    }
+    header p {
+      color: rgba(255,255,255,.55);
+      font-size: .8rem;
+      margin-top: .15rem;
+    }
+
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 2rem 1.25rem 3rem;
+      display: flex;
+      flex-direction: column;
+      gap: 2.5rem;
+    }
+
+    .section-label {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      margin-bottom: 1rem;
+    }
+    .section-label .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .section-label h2 {
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .section-label .rule {
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .tile-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: .75rem;
+    }
+
+    .tile {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      align-items: stretch;
+      overflow: hidden;
+      transition: box-shadow var(--transition), transform var(--transition);
+    }
+    .tile:hover {
+      box-shadow: var(--shadow-hover);
+      transform: translateY(-2px);
+    }
+    .tile:focus-visible {
+      outline: 2px solid var(--maize);
+      outline-offset: 2px;
+    }
+    .tile-accent { width: 5px; flex-shrink: 0; }
+    .tile-body {
+      padding: .9rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: .3rem;
+    }
+    .tile-icon { font-size: 1.1rem; line-height: 1; }
+    .tile-name {
+      font-size: .875rem;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.3;
+    }
+    .tile-type { font-size: .7rem; color: var(--muted); font-weight: 500; }
+
+    .cat-community .tile-accent { background: var(--c-community); }
+    .cat-duty      .tile-accent { background: var(--c-duty); }
+    .cat-docs      .tile-accent { background: var(--c-docs); }
+    .cat-facilities .tile-accent { background: var(--c-facilities); }
+    .cat-housing   .tile-accent { background: var(--c-housing); }
+    .cat-campus    .tile-accent { background: var(--c-campus); }
+
+    .dot-community  { background: var(--c-community); }
+    .dot-duty       { background: var(--c-duty); }
+    .dot-docs       { background: var(--c-docs); }
+    .dot-facilities { background: var(--c-facilities); }
+    .dot-housing    { background: var(--c-housing); }
+    .dot-campus     { background: var(--c-campus); }
+
+    footer {
+      text-align: center;
+      font-size: .75rem;
+      color: var(--muted);
+      padding: 1.5rem 1rem 2.5rem;
+    }
+
+    @media (max-width: 480px) {
+      header { padding: 1rem 1rem .9rem; }
+      .tile-grid { grid-template-columns: 1fr 1fr; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .tile { transition: none; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div><div class="header-badge">ResStaff</div></div>
+  <div>
+    <h1>Northwood Resources</h1>
+    <p>Quick links for RAs &amp; Staff · University of Michigan</p>
+  </div>
+</header>
+
+<main>
+
+  <!-- ── Community Development ──────────────────────────────── -->
+  <section>
+    <div class="section-label">
+      <div class="dot dot-community"></div>
+      <h2>Community Development</h2>
+      <div class="rule"></div>
+    </div>
+    <div class="tile-grid">
+
+      <a class="tile cat-community" target="_blank" rel="noopener"
+         href="https://docs.google.com/spreadsheets/d/1oYiYRhh9QQJBVd5DziATsO0faXslK4O47rOo1rXeYW4/edit?gid=683892108#gid=683892108">
+        <div class="tile-accent"></div>
+        <div class="tile-body">
+          <div class="tile-icon">📋</div>
+          <div class="tile-name">Fall 2025 CEM</div>
+          <div class="tile-type">Google Sheets</div>
+        </div>
+      </a>
+
+      <a class="tile cat-community" target="_blank" rel="noopener"
+         href="https://docs.google.com/spreadsheets/d/1woMtRknSFGT5qv78xo8XdrS1qqqSVNORXUZe_AYcBKo/edit?gid=683892108#gid=683892108">
+        <div class="tile-accent"></div>
+        <div class="tile-body">
+          <div class="tile-icon">📋</div>
+          <div class="tile-name">Winter 2026 CEM</div>
+          <div class="tile-type">Google Sheets</div>
+        </div>
+      </a>
+
+      <a class="tile cat-community" target="_blank" rel="noopener"
+         href="https://docs.google.com/forms/d/e/1FAIpQLSf1hujZj68LZv7CcCHtgyuSBMZPiBYFJx0rD93P07FHTQw92g/viewform?usp=dialog">
+        <div class="tile-accent"></div>
+        <div class="tile-body">
+          <div class="tile-icon">📝</div>
+          <div class="tile-name">Program Proposal Form</div>
+          <div class="tile-type">Google Forms</div>
+        </div>
+      </a>
+
+      <a class="tile cat-community" target="_blank" rel="noopener"
+         href="https://docs.google.com/spreadsheets/d/1s0L8GebGwLoCxeenS_eYztenHKdbzuKN94QVfO9OAIE/edit?gid=458729105#gid=458729105">
+        <div class="tile-accent"></div>
+        <div class="tile-body">
+          <div class="tile-icon">📊</div>
+          <div class="tile-name">Community Development Tracker</div>
+          <div class="tile-type">Google Sheets · 2026–2027</div>
+        </div>
+      </a>
+
+      <a class="tile cat-community" target="_blank" rel="noopener"
+         href="https://drive.google.com/drive/folders/1dmtOESyYSRshqaAHl9PTgFgp4QJF-HMr">
+        <div class="tile-accent"></div>
+        <div class="tile-body">
+          <div class="tile-icon">📁</div>
+          <div class="tile-name">NW Program Proposal Folder</div>
+          <div class="tile-type">Google Drive</div>
+        </div>
+      </a>
+
+      <a class="tile cat-community" target="_blank" rel="noopener"
+         href="https://calendar.google.com/calendar/u/0?cid=Y185ZTk4YzQzZGZmYTM2MDQ3YWM3YmY0N2UxYTgzYTliYTEzZWEyNDc3MDA2MDdjYWU0MWUzMzQ2NGU2NTRlMjFmQGdyb3VwLmNhbGVuZGFyLmdvb2dsZS5jb20">
+        <div class="tile-accent"></div>
+        <div class="tile-body">
+          <div class="tile-icon">📅</div>
+          <div class="tile-name">NW Programming Calendar</div>
+          <div class="tile-type">Google Calendar</div>
+        </div>
+      </a>
+
+      <a class="tile cat-community" target="_blank" rel="noopener"
+         href="https://sessions.studentlife.umich.edu/manage/track/14382/session-select">
+        <div class="tile-accent"></div>
+        <div class="tile-body">
+          <div class="tile-icon">🎟️</div>
+          <div class="tile-name">Sessions</div>
+          <div class="tile-type">Student Life Portal</div>
+        </div>
+      </a>
+
+      <a class="tile cat-community" target="_blank" rel="noopener"
+         href="https://docs.google.com/spreadsheets/d/1l8vsAoi-AKyYktF8nk59sVIyKNINbYZ6HYCksY5CPag/edit?gid=1512175233#gid=1512175233">
+        <div class="tile-accent"></div>
+        <div class="tile-body">
+          <div class="tile-icon">💰</div>
+          <div class="tile-name">NW Program Budget Sheet</div>
+          <div class="tile-type">Google Sheets</div>
+        </div>
+      </a>
+
+      <a class="tile cat-community" target="_blank" rel="noopener"
+         href="https://docs.google.com/document/d/1HAEWre04K3IGJ2aAhJtwYjUqqyR_JcQxuUxuwg5Yivw/edit?tab=t.0">
+        <div class="tile-accent"></div>
+        <div class="tile-body">
+          <div class="tile-icon">🍽️</div>
+          <div class="tile-name">NetCatering Menu 2025–2026</div>
+          <div class="tile-type">Google Docs</div>
+        </div>
+      </a>
+
+    </div>
+  </section>
+
+  <!-- ── RA On Duty ──────────────────────────────────────────── -->
+  <section>
+    <div class="section-label">
+      <div class="dot dot-duty"></div>
+      <h2>RA On Duty</h2>
+      <div class="rule"></div>
+    </div>
+    <div class="tile-grid">
+
+      <a class="tile cat-duty" target="_blank" rel="noopener"
+         href="https://docs.google.com/spreadsheets/d/1r1ACNlZ2quooVm93PWiXKlSyf_FUFJcRivdUvNB8f78/edit?gid=585751706#gid=585751706">
+        <div class="tile-accent"></div>
+        <div class="tile-body">
+          <div class="tile-icon">🗓️</div>
+          <div class="tile-name">NW Duty Schedule</div>
+          <div class="tile-type">Google Sheets</div>
+        </div>
+      </a>
+
+      <a class="tile cat-duty" target="_blank" rel="noopener"
+         href="https://umich.starrezhousing.com/StarRezWeb/dashboard/58">
+        <div class="tile-accent"></div>
+        <div class="tile-body">
+          <div class="tile-icon">🏠</div>
+          <div class="tile-name">StarRez</div>
+          <div class="tile-type">Housing Portal</div>
+        </div>
+      </a>
+
+      <a class="tile cat-duty" target="_blank" rel="noopener"
+         href="http://umich-advocate.symplicity.com/">
+        <div class="tile-accent"></div>
+        <div class="tile-body">
+          <div class="tile-icon">🛡️</div>
+          <div class="tile-name">Advocate</div>
+          <div class="tile-type">Incident Reporting</div>
+        </div>
+      </a>
+
+      <a class="tile cat-duty" target="_blank" rel="noopener"
+         href="https://docs.google.com/document/d/1Xv0W7aLPILCcrAwR02IY5_uB9yzdP233/edit?tab=t.0">
+        <div class="tile-accent"></div>
+        <div class="tile-body">
+          <div class="tile-icon">📘</div>
+          <div class="tile-name">2025–2026 CLAM</div>
+          <div class="tile-type">Google Docs</div>
+        </div>
+      </a>
+
+    </div>
+  </section>
+
+  <!-- ── Additional NW & ResStaff Documents ─────────────────── -->
+  <section>
+    <div class="section-label">
+      <div class="dot dot-docs"></div>
+      <h2>Additional NW &amp; ResStaff Documents</h2>
+      <div class="rule"></div>
+    </div>
+    <div class="tile-grid">
+
+      <a class="tile cat-docs" target="_blank" rel="noopener"
+         href="https://drive.google.com/drive/folders/1jgnizGJUxV5B6t2OmnDg7AW6OiVnev0d?usp=drive_link">
+        <div class="tile-accent"></div>
+        <div class="tile-body">
+          <div class="tile-icon">📁</div>
+          <div class="tile-name">MNM Agendas &amp; Materials</div>
+          <div class="tile-type">Google Drive</div>
+        </div>
+      </a>
+
+      <a class="tile cat-docs" target="_blank" rel="noopener"
+         href="https://docs.google.com/forms/d/e/1FAIpQLSfBuGAOHUc6t5rfoEov3lfn0adar5-xEgec53R0fEC0055ewA/viewform">
+        <div class="tile-accent"></div>
+        <div class="tile-body">
+          <div class="tile-icon">📝</div>
+          <div class="tile-name">MNM Absence Request Form</div>
+          <div class="tile-type">Google Forms</div>
+        </div>
+      </a>
+
+      <a class="tile cat-docs" target="_blank" rel="noopener"
+         href="https://docs.google.com/document/d/17QkHaPNczgMqTZ3duI-prAgGfXxMwAv6SOpxYOPjX3Q/edit?tab=t.w539s3lwcate">
+        <div class="tile-accent"></div>
+        <div class="tile-body">
+          <div class="tile-icon">✉️</div>
+          <div class="tile-name">Email Templates (HD Approved)</div>
+          <div class="tile-type">Google Docs</div>
+        </div>
+      </a>
+
+      <a class="tile cat-docs" target="_blank" rel="noopener"
+         href="https://docs.google.com/spreadsheets/d/1ODHzXkPbxDc2GhBGleVbNoSgLPNMeDkjpyq_WxdzQTM/edit?gid=0#gid=0">
+        <div class="tile-accent"></div>
+        <div class="tile-body">
+          <div class="tile-icon">📦</div>
+          <div class="tile-name">NW Move-In Move-Out Chart</div>
+          <div class="tile-type">Google Sheets</div>
+        </div>
+      </a>
+
+      <a class="tile cat-docs" target="_blank" rel="noopener"
+         href="https://docs.google.com/document/d/1exBRJFiPhUi4kKCv7rEZqonTyGyqUy6nxqrP_Pm0BJ0/copy">
+        <div class="tile-accent"></div>
+        <div class="tile-body">
+          <div class="tile-icon">🤝</div>
+          <div class="tile-name">Roommate Agreement Document</div>
+          <div class="tile-type">Google Docs · Copy</div>
+        </div>
+      </a>
+
+      <a class="tile cat-docs" target="_blank" rel="noopener"
+         href="https://docs.google.com/forms/d/e/1FAIpQLSdsh6NrSDNMot1FjgHLksPWCSBtVa9giQLE_9BPlDkFcG60lA/viewform">
+        <div class="tile-accent"></div>
+        <div class="tile-body">
+          <div class="tile-icon">📝</div>
+          <div class="tile-name">Roommate Agreement Form</div>
+          <div class="tile-type">Google Forms</div>
+        </div>
+      </a>
+
+      <a class="tile cat-docs" target="_blank" rel="noopener"
+         href="https://mcommunity.umich.edu/group/NW%20RA%20Braden%2025-26">
+        <div class="tile-accent"></div>
+        <div class="tile-body">
+          <div class="tile-icon">👥</div>
+          <div class="tile-name">M Community · NW RA Group</div>
+          <div class="tile-type">mcommunity.umich.edu</div>
+        </div>
+      </a>
+
+    </div>
+  </section>
+
+  <!-- ── Facilities ──────────────────────────────────────────── -->
+  <section>
+    <div class="section-label">
+      <div class="dot dot-facilities"></div>
+      <h2>Facilities</h2>
+      <div class="rule"></div>
+    </div>
+    <div class="tile-grid">
+
+      <a class="tile cat-facilities" target="_blank" rel="noopener"
+         href="https://svcs.housing.umich.edu/facilities/">
+        <div class="tile-accent"></div>
+        <div class="tile-body">
+          <div class="tile-icon">🔧</div>
+          <div class="tile-name">Fix-It Request</div>
+          <div class="tile-type">Housing Services</div>
+        </div>
+      </a>
+
+      <a class="tile cat-facilities" target="_blank" rel="noopener"
+         href="https://housing.umich.edu/forms/northwood-air-conditioning-registration-form/">
+        <div class="tile-accent"></div>
+        <div class="tile-body">
+          <div class="tile-icon">❄️</div>
+          <div class="tile-name">AC Registration Form</div>
+          <div class="tile-type">Housing Forms</div>
+        </div>
+      </a>
+
+      <a class="tile cat-facilities" target="_blank" rel="noopener"
+         href="https://kb.housing.umich.edu/hc/en-us/articles/360027591952-Air-Conditioning-Information-for-Northwood-I-II-IV-and-V">
+        <div class="tile-accent"></div>
+        <div class="tile-body">
+          <div class="tile-icon">ℹ️</div>
+          <div class="tile-name">AC Info · NW I, II, IV &amp; V</div>
+          <div class="tile-type">Housing KB</div>
+        </div>
+      </a>
+
+      <a class="tile cat-facilities" target="_blank" rel="noopener"
+         href="https://docs.google.com/document/d/1II2zXkipX6ai8PTbj3kRfeO78NGqWUS6OE4Fq0KSvbE/edit?tab=t.0#heading=h.8fue6nj5q0cp">
+        <div class="tile-accent"></div>
+        <div class="tile-body">
+          <div class="tile-icon">♻️</div>
+          <div class="tile-name">Northwood Composting Guide</div>
+          <div class="tile-type">Google Docs</div>
+        </div>
+      </a>
+
+    </div>
+  </section>
+
+  <!-- ── Miscellaneous Housing Info ─────────────────────────── -->
+  <section>
+    <div class="section-label">
+      <div class="dot dot-housing"></div>
+      <h2>Miscellaneous Housing Info</h2>
+      <div class="rule"></div>
+    </div>
+    <div class="tile-grid">
+
+      <a class="tile cat-housing" target="_blank" rel="noopener"
+         href="https://housing.umich.edu/forms/apartment-transfer-request/">
+        <div class="tile-accent"></div>
+        <div class="tile-body">
+          <div class="tile-icon">🔄</div>
+          <div class="tile-name">Apartment Change Request</div>
+          <div class="tile-type">Housing Forms</div>
+        </div>
+      </a>
+
+      <a class="tile cat-housing" target="_blank" rel="noopener"
+         href="https://kb.housing.umich.edu/hc/en-us/articles/360023101211-Graduate-Housing-Renewal-Information">
+        <div class="tile-accent"></div>
+        <div class="tile-body">
+          <div class="tile-icon">🎓</div>
+          <div class="tile-name">Grad Housing Renewal Info</div>
+          <div class="tile-type">Housing KB</div>
+        </div>
+      </a>
+
+      <a class="tile cat-housing" target="_blank" rel="noopener"
+         href="https://kb.housing.umich.edu/hc/en-us/articles/360003036332-Paying-your-rent">
+        <div class="tile-accent"></div>
+        <div class="tile-body">
+          <div class="tile-icon">💳</div>
+          <div class="tile-name">Rent Payment &amp; Billing</div>
+          <div class="tile-type">Housing KB</div>
+        </div>
+      </a>
+
+      <a class="tile cat-housing" target="_blank" rel="noopener"
+         href="https://housing.umich.edu/forms/">
+        <div class="tile-accent"></div>
+        <div class="tile-body">
+          <div class="tile-icon">📄</div>
+          <div class="tile-name">Housing Request Forms</div>
+          <div class="tile-type">Housing Portal</div>
+        </div>
+      </a>
+
+      <a class="tile cat-housing" target="_blank" rel="noopener"
+         href="https://docs.google.com/forms/d/e/1FAIpQLSelza9PCLJmSBy9QcqGHDMvXCIuQ3d627OBZi5o81CBL4h-Tw/viewform">
+        <div class="tile-accent"></div>
+        <div class="tile-body">
+          <div class="tile-icon">🚗</div>
+          <div class="tile-name">2026 Student Parking Application</div>
+          <div class="tile-type">Google Forms</div>
+        </div>
+      </a>
+
+      <a class="tile cat-housing" target="_blank" rel="noopener"
+         href="https://housing.umich.edu/forms/northwood-community-center-or-mcintyre-space-reservation-form/">
+        <div class="tile-accent"></div>
+        <div class="tile-body">
+          <div class="tile-icon">🏛️</div>
+          <div class="tile-name">Community Space Reservation</div>
+          <div class="tile-type">Housing Forms</div>
+        </div>
+      </a>
+
+    </div>
+  </section>
+
+  <!-- ── Campus Resources ────────────────────────────────────── -->
+  <section>
+    <div class="section-label">
+      <div class="dot dot-campus"></div>
+      <h2>Campus Resources</h2>
+      <div class="rule"></div>
+    </div>
+    <div class="tile-grid">
+
+      <a class="tile cat-campus" target="_blank" rel="noopener"
+         href="https://offcampus.umich.edu/">
+        <div class="tile-accent"></div>
+        <div class="tile-body">
+          <div class="tile-icon">🏘️</div>
+          <div class="tile-name">Beyond the Diag</div>
+          <div class="tile-type">Off-Campus Housing Info</div>
+        </div>
+      </a>
+
+      <a class="tile cat-campus" target="_blank" rel="noopener"
+         href="https://kb.housing.umich.edu/hc/en-us/articles/360003079551-Landlord-Reference">
+        <div class="tile-accent"></div>
+        <div class="tile-body">
+          <div class="tile-icon">📋</div>
+          <div class="tile-name">Landlord Reference Info</div>
+          <div class="tile-type">Housing KB</div>
+        </div>
+      </a>
+
+      <a class="tile cat-campus" target="_blank" rel="noopener"
+         href="https://kb.housing.umich.edu/hc/en-us/articles/360003060332-Shipping-and-storage">
+        <div class="tile-accent"></div>
+        <div class="tile-body">
+          <div class="tile-icon">📦</div>
+          <div class="tile-name">Shipping &amp; Storage Services</div>
+          <div class="tile-type">Housing KB</div>
+        </div>
+      </a>
+
+      <a class="tile cat-campus" target="_blank" rel="noopener"
+         href="https://events.umich.edu/month">
+        <div class="tile-accent"></div>
+        <div class="tile-body">
+          <div class="tile-icon">🎉</div>
+          <div class="tile-name">U-M Events Calendar</div>
+          <div class="tile-type">events.umich.edu</div>
+        </div>
+      </a>
+
+      <a class="tile cat-campus" target="_blank" rel="noopener"
+         href="https://cew.umich.edu/advocacy-initiatives/students-with-children/">
+        <div class="tile-accent"></div>
+        <div class="tile-body">
+          <div class="tile-icon">👶</div>
+          <div class="tile-name">Student Caregivers (CEW+)</div>
+          <div class="tile-type">cew.umich.edu</div>
+        </div>
+      </a>
+
+      <a class="tile cat-campus" target="_blank" rel="noopener"
+         href="https://ocsi.umich.edu/programs/waste-reduction/composting/zero-waste-events/">
+        <div class="tile-accent"></div>
+        <div class="tile-body">
+          <div class="tile-icon">🌿</div>
+          <div class="tile-name">Zero Waste Events Info</div>
+          <div class="tile-type">ocsi.umich.edu</div>
+        </div>
+      </a>
+
+      <a class="tile cat-campus" target="_blank" rel="noopener"
+         href="https://its.umich.edu/communication/television-video/xfinity-on-campus/getting-started?check_logged_in=1">
+        <div class="tile-accent"></div>
+        <div class="tile-body">
+          <div class="tile-icon">📺</div>
+          <div class="tile-name">Xfinity on Campus Sign-In</div>
+          <div class="tile-type">its.umich.edu</div>
+        </div>
+      </a>
+
+      <a class="tile cat-campus" target="_blank" rel="noopener"
+         href="https://techshop.umich.edu/977006.html">
+        <div class="tile-accent"></div>
+        <div class="tile-body">
+          <div class="tile-icon">🔑</div>
+          <div class="tile-name">Tech Shop · Free YubiKey</div>
+          <div class="tile-type">techshop.umich.edu</div>
+        </div>
+      </a>
+
+      <a class="tile cat-campus" target="_blank" rel="noopener"
+         href="https://teamdynamix.umich.edu/TDClient/30/Portal/KB/Article/11078/Enroll-a-U-M-Hardware-Token-or-U-M-YubiKey-for-Duo">
+        <div class="tile-accent"></div>
+        <div class="tile-body">
+          <div class="tile-icon">🔐</div>
+          <div class="tile-name">Enroll YubiKey for Duo</div>
+          <div class="tile-type">U-M ITS</div>
+        </div>
+      </a>
+
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  Northwood ResStaff · University of Michigan Housing · Updated June 2026
+</footer>
+
+</body>
+</html>
