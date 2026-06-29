@@ -28,6 +28,7 @@
       --c-facilities:#1F7A4D;
       --c-housing:   #B8610A;
       --c-campus:    #0D6E6E;
+      --c-guide:     #7A5C00;
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -161,6 +162,96 @@
     .dot-facilities { background: var(--c-facilities); }
     .dot-housing    { background: var(--c-housing); }
     .dot-campus     { background: var(--c-campus); }
+    .dot-guide      { background: var(--c-guide); }
+
+    /* ── Program Proposal Guide ─────────────────────────────── */
+    .guide-steps {
+      display: flex;
+      flex-direction: column;
+      gap: .6rem;
+    }
+    .step {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      display: flex;
+      align-items: flex-start;
+      gap: .85rem;
+      padding: .85rem 1rem;
+    }
+    .step-num {
+      flex-shrink: 0;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--c-guide);
+      color: #fff;
+      font-size: .75rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: .05rem;
+    }
+    .step-body {
+      display: flex;
+      flex-direction: column;
+      gap: .3rem;
+      flex: 1;
+    }
+    .step-header {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      flex-wrap: wrap;
+    }
+    .scope-badge {
+      font-size: .65rem;
+      font-weight: 700;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      padding: .15rem .45rem;
+      border-radius: 4px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .scope-one  { background: #E0F0EC; color: var(--c-facilities); }
+    .scope-all  { background: #EDE0F7; color: var(--c-docs); }
+    .step-title {
+      font-size: .875rem;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.3;
+    }
+    .step-desc {
+      font-size: .8rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .step-desc ul {
+      margin: .3rem 0 0 1.1rem;
+      display: flex;
+      flex-direction: column;
+      gap: .15rem;
+    }
+    .step-link {
+      color: var(--c-guide);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      font-weight: 500;
+    }
+    .step-link:hover { opacity: .75; }
+    .step-note {
+      font-size: .75rem;
+      color: #8B5E00;
+      background: #FFF8E1;
+      border-left: 3px solid var(--c-guide);
+      border-radius: 0 4px 4px 0;
+      padding: .3rem .55rem;
+      margin-top: .25rem;
+      line-height: 1.45;
+    }
 
     footer {
       text-align: center;
@@ -660,6 +751,156 @@
           <div class="tile-type">U-M ITS</div>
         </div>
       </a>
+
+      <a class="tile cat-campus" target="_blank" rel="noopener"
+         href="https://www.csg.umich.edu/subscriptions">
+        <div class="tile-accent"></div>
+        <div class="tile-body">
+          <div class="tile-icon">📰</div>
+          <div class="tile-name">CSG News Subscriptions</div>
+          <div class="tile-type">csg.umich.edu</div>
+        </div>
+      </a>
+
+
+      
+    </div>
+  </section>
+
+  <!-- ── Program Proposal Guide ────────────────────────────── -->
+  <section>
+    <div class="section-label">
+      <div class="dot dot-guide"></div>
+      <h2>Program Proposal — Step-by-Step</h2>
+      <div class="rule"></div>
+    </div>
+    <div class="guide-steps">
+
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="step-header">
+            <span class="scope-badge scope-one">One Person</span>
+            <span class="step-title">Add the program to the NW Programming Calendar</span>
+          </div>
+          <div class="step-desc">
+            Open the <a class="step-link" href="https://calendar.google.com/calendar/u/0?cid=Y185ZTk4YzQzZGZmYTM2MDQ3YWM3YmY0N2UxYTgzYTliYTEzZWEyNDc3MDA2MDdjYWU0MWUzMzQ2NGU2NTRlMjFmQGdyb3VwLmNhbGVuZGFyLmdvb2dsZS5jb20" target="_blank" rel="noopener">NW Programming Calendar</a> and create an event for your program.
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="step-header">
+            <span class="scope-badge scope-one">One Person</span>
+            <span class="step-title">Fill out the Supply Request Sheet</span>
+          </div>
+          <div class="step-desc">
+            If your program requires supplies, fill out the <a class="step-link" href="https://docs.google.com/spreadsheets/d/1AOqy10Vco43xa3JrTevCmRoSHPqnvsxXQeg4bha-I8Y/edit?gid=2023730084#gid=2023730084" target="_blank" rel="noopener">Supply Request Sheet</a> and enter your program's supply request information. Copy the sheet's URL — you'll need to paste it into the Program Proposal Form in Step 3.
+            <div class="step-note">⚠️ Correction: the supply request sheet must be filled out <em>before</em> submitting the proposal form, because the form requires a link to it. Filling it out after (as originally listed) will block form submission.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <div class="step-header">
+            <span class="scope-badge scope-one">One Person</span>
+            <span class="step-title">Submit the Program Proposal Form</span>
+          </div>
+          <div class="step-desc">
+            Complete the <a class="step-link" href="https://docs.google.com/forms/d/e/1FAIpQLSf1hujZj68LZv7CcCHtgyuSBMZPiBYFJx0rD93P07FHTQw92g/viewform?usp=dialog" target="_blank" rel="noopener">Program Proposal Google Form</a>, including the budget sheet link from Step 2. For collaborative programs, only one RA submits this form.
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <div class="step-header">
+            <span class="scope-badge scope-one">One Person</span>
+            <span class="step-title">Find the auto-generated Google Doc &amp; share it</span>
+          </div>
+          <div class="step-desc">
+            Open the <a class="step-link" href="https://drive.google.com/drive/folders/1dmtOESyYSRshqaAHl9PTgFgp4QJF-HMr" target="_blank" rel="noopener">NW Program Proposal Folder</a>. A Google Doc named <em>[date] [program title]</em> will have been auto-generated by the form. Do not use any PDF copy in the folder — open the Doc, verify the info, and share it with all collaborators.
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-body">
+          <div class="step-header">
+            <span class="scope-badge scope-all">Everyone</span>
+            <span class="step-title">Review and agree on the Google Doc</span>
+          </div>
+          <div class="step-desc">
+            All participating RAs should open the shared Google Doc and verify that the information is correct. For collaborative programs, confirm everyone agrees on the proposal details before submitting to Canvas.
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">6</div>
+        <div class="step-body">
+          <div class="step-header">
+            <span class="scope-badge scope-all">Everyone</span>
+            <span class="step-title">Submit the Canvas Program Proposal Assignment</span>
+          </div>
+          <div class="step-desc">
+            Go to the Program Proposal assignment in <a class="step-link" href="https://canvas.it.umich.edu" target="_blank" rel="noopener">Canvas</a> and paste the following into the text box:
+            <ul>
+              <li><strong>Program Title:</strong> [title]</li>
+              <li><strong>Program Date:</strong> [date]</li>
+              <li><strong>Collaborating RAs:</strong> [all RA names, or N/A]</li>
+              <li><strong>Link to Proposal:</strong> [Google Doc URL from Step 4]</li>
+              <li><strong>Proposal Complete By:</strong> [name of RA who submitted the form]</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">7</div>
+        <div class="step-body">
+          <div class="step-header">
+            <span class="scope-badge scope-all">Everyone</span>
+            <span class="step-title">Submit program flyers on Canvas</span>
+          </div>
+          <div class="step-desc">
+            Each RA must upload the program flyer(s) to Canvas individually.  Here's a <a class="step-link" href="https://drive.google.com/drive/folders/1LuIC5ecxOdjDcKlUUpN7PZPQIX5MuKEr?usp=sharing" target="_blank" rel="noopener">flyer Drive folder</a> so that you don't have to G-Chat them to each other.
+            <div class="step-note">⚠️ Correction: every RA submits flyers separately — not just one person. Don't skip this even if someone else already uploaded theirs.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">8</div>
+        <div class="step-body">
+          <div class="step-header">
+            <span class="scope-badge scope-one">Everyone</span>
+            <span class="step-title">Update the Program Budget Sheet</span>
+          </div>
+          <div class="step-desc">
+            If your program requires supplies, fill out the <a class="step-link" href="https://docs.google.com/spreadsheets/d/1l8vsAoi-AKyYktF8nk59sVIyKNINbYZ6HYCksY5CPag/edit?gid=1394890671#gid=1394890671" target="_blank" rel="noopener">NW Program Budget Sheet</a>.
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">9</div>
+        <div class="step-body">
+          <div class="step-header">
+            <span class="scope-badge scope-all">Everyone</span>
+            <span class="step-title">Log the program in the CD Tracker</span>
+          </div>
+          <div class="step-desc">
+            Each RA logs their participation in the <a class="step-link" href="https://docs.google.com/spreadsheets/d/1s0L8GebGwLoCxeenS_eYztenHKdbzuKN94QVfO9OAIE/edit?gid=305599219#gid=305599219" target="_blank" rel="noopener">Community Development Tracker</a>.
+          </div>
+        </div>
+      </div>
 
     </div>
   </section>
