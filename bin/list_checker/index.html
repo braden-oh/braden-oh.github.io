@@ -99,14 +99,18 @@
         <input type="text" id="keepList" value="jpclay, imel, mcteed, dtgary, bradenoh, oakwood">
     </div>
 
+    <div class="form-group">
+        <label><input type="checkbox" id="excludeReserved" checked> Exclude "Reserved" StarRez entries from ADD list</label>
+    </div>
+
     <div class="drop-zone" id="mcDropZone">
-        <p><strong>Drag & Drop M Community CSV here<br>(must contain 'Uniqname' column)</strong><br>or click to select file</p>
+        <p><strong>Drag & Drop M Community CSV here<br>(must contain 'Identifier' column)</strong><br>or click to select file</p>
         <input type="file" id="mcFileInput" accept=".csv" style="display: none;">
         <div class="file-info" id="mcFileInfo"></div>
     </div>
 
     <div class="drop-zone" id="srDropZone">
-        <p><strong>Drag & Drop StarRez CSV here<br>(must contain 'Identfier' column)</strong><br>or click to select file</p>
+        <p><strong>Drag & Drop StarRez CSV here<br>(must contain 'Uniqname' column)</strong><br>or click to select file</p>
         <input type="file" id="srFileInput" accept=".csv" style="display: none;">
         <div class="file-info" id="srFileInfo"></div>
     </div>
@@ -199,6 +203,9 @@
         const keepArray = document.getElementById('keepList').value
             .split(',').map(n => n.trim().toLowerCase()).filter(n => n !== "");
 
+        // 1b. Get Reserved Exclusion Toggle
+        const excludeReserved = document.getElementById('excludeReserved').checked;
+
         // 2. Validate Headers (Based on user correction)
         const mcKeys = mcData && mcData.length ? Object.keys(mcData[0]) : [];
         const srKeys = srData && srData.length ? Object.keys(srData[0]) : [];
@@ -221,9 +228,16 @@
         const mcSet = new Set(mcNames);
         const srSet = new Set(srNames);
 
+        // 3b. Reserved-exclusion subset (ADD only; does NOT affect REMOVE, so
+        // already-added reserved members aren't mistakenly flagged for removal)
+        const srDataAddable = excludeReserved
+            ? srData.filter(r => (r['entry status'] || '').trim().toLowerCase() !== 'reserved')
+            : srData;
+        const srNamesAddable = srDataAddable.map(r => (r['uniqname'] || '').trim().toLowerCase()).filter(n => n !== "");
+
         // 4. LOGIC
         // ADD: In StarRez (Truth), but NOT in M Community
-        const toAdd = srNames.filter(name => !mcSet.has(name));
+        const toAdd = srNamesAddable.filter(name => !mcSet.has(name));
 
         // REMOVE: In M Community, NOT in StarRez, AND NOT in Keep List
         const toRemove = mcNames.filter(name => !srSet.has(name) && !keepArray.includes(name));
