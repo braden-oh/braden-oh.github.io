@@ -1,0 +1,744 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Can a space data center stay up? Drag and propellant calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif&display=swap" rel="stylesheet">
+<style>
+:root {
+  color-scheme: light;
+  --paper: #E8EDF0; --panel: #F6F9FA; --ink: #16212B; --muted: #566674; --line: #BCC8D0;
+  --wind: #8E9CA7; --drag: #C4381F; --sun: #C98A0B; --cool: #2A58A0; --ok: #2B7A68; --warn: #B8720A;
+  --sans: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --serif: 'Instrument Serif', 'Iowan Old Style', Georgia, serif;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --paper: #0E1620; --panel: #152029; --ink: #E7EEF3; --muted: #97A7B4; --line: #2C3C49;
+    --wind: #66778A; --drag: #F26A4F; --sun: #F0B93A; --cool: #74A5EC; --ok: #5CBCA3; --warn: #E9A23B;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --paper: #0E1620; --panel: #152029; --ink: #E7EEF3; --muted: #97A7B4; --line: #2C3C49;
+  --wind: #66778A; --drag: #F26A4F; --sun: #F0B93A; --cool: #74A5EC; --ok: #5CBCA3; --warn: #E9A23B;
+}
+html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.45; }
+.wrap { max-width: 1340px; margin: 0 auto; padding: 22px 24px 48px; }
+header { display: flex; justify-content: space-between; gap: 24px; align-items: flex-start; margin-bottom: 20px; }
+h1 { font-family: var(--serif); font-weight: 400; font-size: clamp(30px, 4vw, 46px); line-height: 1.05; margin: 0 0 6px; letter-spacing: -0.01em; }
+header p { margin: 0; color: var(--muted); max-width: 62ch; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible, input:focus-visible, summary:focus-visible { outline: 3px solid var(--cool); outline-offset: 2px; }
+.theme { border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 6px 14px; font-size: 14px; white-space: nowrap; }
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 32px; align-items: start; }
+@media (max-width: 1020px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+
+.verdict { font-size: clamp(18px, 2.2vw, 24px); line-height: 1.3; margin: 0 0 16px; max-width: 60ch; }
+.scene { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 8px 8px 4px; }
+.scene svg { display: block; width: 100%; height: auto; }
+.scene.two { display: grid; grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr); gap: 8px; align-items: center; }
+@media (max-width: 760px) { .scene.two { grid-template-columns: minmax(0, 1fr); } }
+.t, .tb, .td { paint-order: stroke; stroke: var(--panel); stroke-width: 4px; stroke-linejoin: round; }
+.t { fill: var(--muted); font: 500 12.5px var(--sans); }
+.tb { fill: var(--ink); font: 600 13.5px var(--sans); }
+.td { fill: var(--drag); font: 600 13px var(--sans); }
+
+.readouts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; margin: 18px 0 8px; border-top: 1px solid var(--line); }
+@media (max-width: 760px) { .readouts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.ro { padding: 14px 16px 12px 0; border-bottom: 1px solid var(--line); }
+.ro + .ro { padding-left: 16px; border-left: 1px solid var(--line); }
+@media (max-width: 760px) { .ro:nth-child(3) { padding-left: 0; border-left: 0; } }
+.ro .lab { font-size: 14px; color: var(--muted); }
+.ro .val { font-family: var(--serif); font-size: clamp(40px, 5vw, 58px); line-height: 1; margin: 4px 0 4px; letter-spacing: -0.01em; }
+.ro .val small { font-family: var(--sans); font-size: 0.32em; color: var(--muted); margin-left: 4px; letter-spacing: 0; }
+.ro .sub { font-size: 13.5px; color: var(--muted); }
+.ro.hot .val { color: var(--drag); }
+
+.panels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin-top: 22px; }
+@media (max-width: 760px) { .panels { grid-template-columns: minmax(0, 1fr); } }
+h2 { font-size: 16px; font-weight: 600; margin: 0 0 2px; }
+.note { font-size: 13.5px; color: var(--muted); margin: 0 0 10px; }
+.chart svg { width: 100%; height: auto; display: block; }
+.axis { stroke: var(--line); stroke-width: 1; }
+.full { margin-top: 26px; }
+
+.supply .row { display: grid; grid-template-columns: 84px minmax(0, 1fr) 110px; gap: 10px; align-items: center; margin: 7px 0; font-size: 14.5px; }
+.supply .row.sel .nm { font-weight: 600; }
+.track { position: relative; height: 20px; background: color-mix(in srgb, var(--line) 45%, transparent); border-radius: 2px; }
+.bar { position: absolute; left: 0; top: 0; bottom: 0; background: var(--cool); border-radius: 2px; transition: width .12s linear; }
+.bar.mid { background: var(--warn); }
+.bar.over { background: var(--drag); }
+.mark { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--ink); }
+.ticks { display: grid; grid-template-columns: 84px minmax(0, 1fr) 110px; gap: 10px; }
+.ticks .scale { position: relative; height: 18px; font-size: 12px; color: var(--muted); }
+.ticks .scale span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.ticks .scale span.end { transform: translateX(-100%); }
+.pct { text-align: right; font-variant-numeric: tabular-nums; }
+
+.compare .row { display: grid; grid-template-columns: 150px minmax(0, 1fr) 90px; gap: 10px; align-items: center; margin: 4px 0; font-size: 14.5px; }
+.readouts.five { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.readouts.five .ro .val { font-size: clamp(30px, 3vw, 42px); }
+.ro, .ro .val { min-width: 0; }
+@media (max-width: 900px) { .readouts.five { grid-template-columns: repeat(2, minmax(0, 1fr)); } .readouts.five .ro:nth-child(odd) { padding-left: 0; border-left: 0; } .readouts.five .ro:nth-child(even) { padding-left: 16px; border-left: 1px solid var(--line); } }
+.compare.top { margin: 18px 0 4px; }
+.moonsec svg { width: 100%; max-width: 520px; height: auto; display: block; }
+.forces .bar.d { background: var(--drag); }
+.forces .bar.s { background: var(--sun); }
+.forces .bar.t { background: var(--ink); }
+.compare .pct { font-variant-numeric: tabular-nums; }
+@media (max-width: 560px) { .compare .row { grid-template-columns: 96px minmax(0, 1fr) 72px; } }
+.compare .bar { background: var(--ok); }
+.compare .bar.chem { background: var(--drag); }
+
+.deorbit { border-left: 4px solid var(--drag); padding: 2px 0 2px 16px; margin: 0 0 18px; }
+.dline { margin: 0; font-size: clamp(18px, 2.2vw, 24px); line-height: 1.15; }
+.dline .big { font-family: var(--serif); font-size: clamp(46px, 6vw, 72px); line-height: 1; letter-spacing: -0.01em; color: var(--drag); margin-left: 6px; white-space: nowrap; }
+.dline .big small { font-family: var(--sans); font-size: 0.3em; color: var(--muted); margin-left: 6px; letter-spacing: 0; }
+.deorbit .note { margin: 4px 0 0; }
+.wedge { width: 100%; height: 30px; display: block; }
+.wbg { fill: color-mix(in srgb, var(--line) 55%, transparent); }
+.wf { fill: var(--cool); }
+.wf.mid { fill: var(--warn); }
+.wf.over { fill: var(--drag); }
+aside.controls { position: sticky; top: 12px; max-height: calc(100vh - 24px); overflow-x: hidden; overflow-y: auto; padding-right: 14px; scrollbar-gutter: stable; scrollbar-width: thin; scrollbar-color: var(--line) transparent; min-width: 0; }
+@media (max-width: 1020px) { aside.controls { position: static; max-height: none; overflow: visible; } }
+fieldset { border: 0; border-top: 1px solid var(--line); margin: 0; padding: 14px 0 6px; min-width: 0; min-inline-size: 0; }
+legend { font-weight: 600; font-size: 15px; padding: 0 10px 0 0; }
+.ctl { margin: 0 0 14px; min-width: 0; }
+.ctl .top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; min-width: 0; }
+.ctl label { font-size: 15px; min-width: 0; }
+.ctl output { font-family: var(--serif); font-size: 24px; line-height: 1; font-variant-numeric: tabular-nums; flex: none; white-space: nowrap; }
+.hint { font-size: 12.5px; color: var(--muted); margin: 2px 0 0; }
+input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 30px; background: transparent; margin: 2px 0 0; }
+input[type=range]::-webkit-slider-runnable-track { height: 6px; background: var(--line); border-radius: 3px; }
+input[type=range]::-moz-range-track { height: 6px; background: var(--line); border-radius: 3px; }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 26px; height: 26px; border-radius: 50%; background: var(--cool); border: 3px solid var(--panel); margin-top: -10px; box-shadow: 0 0 0 1px var(--cool); }
+input[type=range]::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: var(--cool); border: 3px solid var(--panel); box-shadow: 0 0 0 1px var(--cool); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; }
+.chip { border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 6px 12px; font-size: 14px; }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+details { border-top: 1px solid var(--line); padding: 12px 0; }
+summary { cursor: pointer; font-weight: 600; font-size: 15px; }
+.assume { display: grid; grid-template-columns: 1fr 104px; gap: 6px 10px; margin-top: 10px; font-size: 14px; align-items: center; }
+.assume input { width: 100%; font: inherit; padding: 4px 6px; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; font-variant-numeric: tabular-nums; }
+footer { margin-top: 36px; border-top: 1px solid var(--line); padding-top: 16px; font-size: 13.5px; color: var(--muted); max-width: 90ch; }
+footer a { color: var(--cool); }
+footer p { margin: 0 0 8px; }
+@media (prefers-reduced-motion: reduce) { .bar { transition: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Can a space data center stay up?</h1>
+      <p>Drag, propellant, and launches for a data center in a dawn-dusk sun-synchronous orbit. Move a slider and every figure follows the derivation document.</p>
+    </div>
+    <button class="theme" id="theme" type="button">Switch theme</button>
+  </header>
+
+  <div class="grid">
+    <main>
+      <p class="verdict" id="verdict" aria-live="polite"></p>
+      <div class="deorbit"><p class="dline" id="dline"></p><p class="note" id="s-deorbit"></p></div>
+      <div class="scene two"><svg id="scene" viewBox="0 0 720 380" role="img" aria-label="Top-down view of the radiator and arrays against the airstream"></svg><svg id="scene3d" viewBox="0 0 380 380" role="img" aria-label="Three-dimensional view of the radiator as seen from the Sun"></svg></div>
+
+      <div class="readouts">
+        <div class="ro" id="ro-drag"><div class="lab">Drag force</div><div class="val" id="v-drag"></div><div class="sub" id="s-drag"></div></div>
+        <div class="ro" id="ro-prop"><div class="lab" id="l-prop">Propellant per year</div><div class="val" id="v-prop"></div><div class="sub" id="s-prop"></div></div>
+        <div class="ro" id="ro-launch"><div class="lab" id="l-launch">Payload-equivalent launches</div><div class="val" id="v-launch"></div><div class="sub" id="s-launch"></div></div>
+        <div class="ro" id="ro-share"><div class="lab" id="l-share"></div><div class="val" id="v-share"></div><div class="sub" id="s-share"></div></div>
+      </div>
+
+      <section class="compare forces top">
+        <h2>Forces to cancel</h2>
+        <p class="note" id="forces-note"></p>
+        <div id="forces"></div>
+      </section>
+
+      <section class="compare top">
+        <h2>Electric propulsion against hydrazine, over the whole mission</h2>
+        <p class="note">Same drag force. Hydrazine is a storable monopropellant.</p>
+        <div id="compare"></div>
+      </section>
+
+      <div class="panels">
+        <section class="chart"><h2>Radiator area against rotation</h2><p class="note">Turned broadside to the wind, both faces see space, so it needs less area.</p><svg id="c-area" viewBox="0 0 340 150"></svg></section>
+        <section class="chart"><h2>Propellant per year against rotation</h2><p class="note">The same rotation changes the wind-facing area, so it changes propellant far more than area.</p><svg id="c-prop" viewBox="0 0 340 150"></svg></section>
+      </div>
+
+      <section class="full supply">
+        <h2>Share of world production used per year, log scale</h2>
+        <div id="supply"></div>
+        <div class="ticks"><span></span><div class="scale" id="ticks"></div><span></span></div>
+      </section>
+
+      <section class="full hall">
+        <h2 id="hall-h"></h2>
+        <p class="note" id="hall-note"></p>
+        <div class="readouts five">
+          <div class="ro"><div class="lab">Thrust</div><div class="val" id="h-F"></div><div class="sub" id="h-Fs">drag plus radiation pressure</div></div>
+          <div class="ro"><div class="lab">Discharge voltage</div><div class="val" id="h-V"></div><div class="sub" id="h-Vs"></div></div>
+          <div class="ro"><div class="lab">Discharge current</div><div class="val" id="h-I"></div><div class="sub" id="h-Is"></div></div>
+          <div class="ro"><div class="lab">Input power</div><div class="val" id="h-Pe"></div><div class="sub" id="h-Pes"></div></div>
+          <div class="ro"><div class="lab">Propellant flow</div><div class="val" id="h-m"></div><div class="sub" id="h-ms"></div></div>
+        </div>
+      </section>
+
+      <section class="full moonsec">
+        <h2>The array next to the Moon, seen from the ground</h2>
+        <svg id="moon" viewBox="0 0 440 220" role="img" aria-label="The Moon beside a square showing how large the solar array would look from the ground"></svg>
+        <p class="note" id="moon-cap" style="margin-bottom:2px"></p>
+        <p class="note" id="moon-foot"></p>
+      </section>
+    </main>
+
+    <aside class="controls" aria-label="Controls">
+      <fieldset><legend>Radiator orientation</legend>
+        <div class="chips" id="orient-presets"></div>
+        <div id="g-orient"></div>
+      </fieldset>
+      <fieldset><legend>Data center</legend>
+        <div class="chips" id="power-presets"></div>
+        <div id="g-dc"></div>
+      </fieldset>
+      <fieldset><legend>Orbit</legend><div id="g-orbit"></div></fieldset>
+      <fieldset><legend>Radiation pressure</legend><div id="g-srp"></div></fieldset>
+      <fieldset><legend>Propulsion</legend>
+        <div class="chips" id="prop-chips" role="group" aria-label="Propellant"></div>
+        <div id="g-prop"></div>
+      </fieldset>
+      <details><summary>Assumptions you can edit</summary><div class="assume" id="assume"></div></details>
+      <details><summary>World production, tonnes per year</summary><div class="assume" id="supplyin"></div></details>
+    </aside>
+  </div>
+
+  <footer>
+    <p>Model: each step is derived in the accompanying document. Radiator net rejection is two-face emission minus the Sun load and the Earth infrared load from a numerically integrated view factor. Ram area is the projected area of arrays, radiators, and bus. Propellant is drag force times time divided by g&#8320; Isp, which does not depend on spacecraft mass.</p>
+    <p>Not modeled: albedo, Earth infrared pressure, thermal-emission thrust, attitude torques, geomagnetic storms, and density changes within a solar cycle beyond the F10.7 setting. Density is NRLMSIS 2.1 averaged over a dawn-dusk orbit. Radiation pressure treats the array as absorbing with a 1.10 coefficient and the radiator as diffuse with 1.60. The drag coefficient of a near-edge-on plate is not really constant. Deorbit time assumes the attitude is held, whereas a real failure could leave the craft tumbling, and it uses the same orbit-mean density, so treat it as an order of magnitude. Mass assumptions are placeholders to be checked.</p>
+    <p>Production figures: zinc 13.0 Mt (2025 estimate) and bismuth 16,000 t (2025 estimate) from the <a href="https://pubs.usgs.gov/periodicals/mcs2026/mcs2026-zinc.pdf">USGS zinc</a> and <a href="https://pubs.usgs.gov/periodicals/mcs2026/mcs2026-bismuth.pdf">USGS bismuth</a> summaries. Xenon about 50 t per year, within the 40 to 60 t quoted by <a href="https://www.symmetrymagazine.org/article/xenon-xenon-everywhere?language_content_entity=und">Symmetry</a> and <a href="https://www.scientificupdate.com/elements-iypt/xenon-the-light-at-the-end-of-the-tunnel/">Scientific Update</a>. Krypton about 300 t per year is weakly sourced: I converted a <a href="https://dataintelo.com/report/global-krypton-xenon-market">market report's</a> 75,000 to 90,000 m&#179; per year at 3.75 kg/m&#179;. Argon about 9 Mt per year converts 5.1 billion m&#179; from an <a href="https://www.indexbox.co.uk/search/argon-market/">IndexBox summary</a> at 1.78 kg/m&#179;. Replace any of these in the panel.</p>
+  </footer>
+</div>
+
+<script>
+/*MODEL_START*/
+const K = {
+  G: 1361, R: 6371e3, mu: 3.986004e14, g0: 9.80665, yr: 365.25 * 86400, sigma: 5.670374e-8,
+  eta: 0.22, fill: 0.90, sigArr: 2.0, sigRad: 5.0, kc: 10, busFrac: 0.20,
+  Cd: 2.2, eps: 0.92, alpha: 0.09, Trad: 293.15, TE: 254.6,
+  e: 1.602176634e-19, amu: 1.66053907e-27, etaV: 0.90, etaM: 0.80, gamma: 0.90, etaB: 0.85, Abus5: 30, ispChem: 225, hEnd: 200,
+  t: 0.3, CrrArr: 1.10, CrrRad: 1.60, cLight: 299792458, omegaE: 7.2921159e-5, crosswind: 1, shade: 1
+};
+
+const RHO_ALTS = [200, 225, 250, 275, 300, 325, 350, 375, 400, 425, 450, 475, 500, 525, 550, 575, 600, 625, 650, 675, 700, 725, 750, 775, 800, 825, 850, 875, 900];
+const RHO_LOW = [1.525e-10, 6.255e-11, 2.809e-11, 1.351e-11, 6.842e-12, 3.610e-12, 1.967e-12, 1.101e-12, 6.299e-13, 3.681e-13, 2.196e-13, 1.338e-13, 8.348e-14, 5.346e-14, 3.525e-14, 2.401e-14, 1.693e-14, 1.237e-14, 9.351e-15, 7.297e-15, 5.856e-15, 4.812e-15, 4.033e-15, 3.432e-15, 2.958e-15, 2.575e-15, 2.259e-15, 1.994e-15, 1.770e-15];
+const RHO_MOD = [2.417e-10, 1.193e-10, 6.390e-11, 3.620e-11, 2.139e-11, 1.306e-11, 8.186e-12, 5.241e-12, 3.415e-12, 2.259e-12, 1.514e-12, 1.026e-12, 7.030e-13, 4.863e-13, 3.396e-13, 2.393e-13, 1.702e-13, 1.223e-13, 8.870e-14, 6.504e-14, 4.824e-14, 3.622e-14, 2.755e-14, 2.124e-14, 1.662e-14, 1.319e-14, 1.063e-14, 8.689e-15, 7.206e-15];
+const RHO_HIGH = [3.514e-10, 1.936e-10, 1.145e-10, 7.100e-11, 4.559e-11, 3.008e-11, 2.028e-11, 1.393e-11, 9.711e-12, 6.860e-12, 4.902e-12, 3.538e-12, 2.577e-12, 1.892e-12, 1.399e-12, 1.042e-12, 7.807e-13, 5.886e-13, 4.463e-13, 3.403e-13, 2.609e-13, 2.011e-13, 1.559e-13, 1.215e-13, 9.525e-14, 7.510e-14, 5.958e-14, 4.756e-14, 3.821e-14];
+const LN_LOW = RHO_LOW.map(Math.log), LN_MOD = RHO_MOD.map(Math.log), LN_HIGH = RHO_HIGH.map(Math.log);
+function lnAt(arr, h) {   // log-linear interpolation in altitude, clamped to the 200 to 900 km table
+  let x = (h - RHO_ALTS[0]) / 25;
+  x = Math.max(0, Math.min(RHO_ALTS.length - 1.000001, x));
+  const i = Math.floor(x), f = x - i;
+  return (1 - f) * arr[i] + f * arr[i + 1];
+}
+// NRLMSIS 2.1 mass density averaged over a dawn-dusk orbit (six and eighteen hours local time, four seasons),
+// tabulated at F10.7 of 70, 150 and 250 and interpolated in log density
+function density(h, f107) {
+  const x = Math.max(70, Math.min(250, f107));
+  if (x <= 150) { const f = (x - 70) / 80; return Math.exp((1 - f) * lnAt(LN_LOW, h) + f * lnAt(LN_MOD, h)); }
+  const f = (x - 150) / 100; return Math.exp((1 - f) * lnAt(LN_MOD, h) + f * lnAt(LN_HIGH, h));
+}
+// orbit mean of |a + b sin u|, the projected tilt of a surface with a fixed pointing error a
+// and a crosswind that swings between -b and +b once per orbit (all in radians)
+function meanTilt(a, b) { return b <= a ? a : (2 / Math.PI) * (Math.sqrt(b * b - a * a) + a * Math.asin(a / b)); }
+
+function viewFactor(gamma, theta) {
+  const n = 48, m = 96;
+  const sg = Math.sin(gamma), cg = Math.cos(gamma);
+  let tot = 0;
+  for (let i = 0; i < n; i++) {
+    const a = (i + 0.5) * theta / n, sa = Math.sin(a), ca = Math.cos(a);
+    for (let j = 0; j < m; j++) {
+      const b = (j + 0.5) * 2 * Math.PI / m;
+      const c = sg * sa * Math.cos(b) + cg * ca;
+      if (c > 0) tot += c * sa;
+    }
+  }
+  return tot * (theta / n) * (2 * Math.PI / m) / Math.PI;
+}
+const vfCache = {};
+function earthFaces(psi, theta) {
+  const key = psi.toFixed(4) + '|' + theta.toFixed(5);
+  if (!(key in vfCache)) vfCache[key] = [viewFactor(Math.PI / 2 + psi, theta), viewFactor(Math.PI / 2 - psi, theta)];   // [Sun-side face, other face]
+  return vfCache[key];
+}
+
+function model(s, c) {
+  const d2r = Math.PI / 180;
+  const phi = s.phi * d2r, psi = s.psi * d2r, dl = s.delta * d2r;
+  const r = c.R + s.alt * 1e3;
+  const rho = density(s.alt, s.f107);
+  const v = Math.sqrt(c.mu / r);
+  const theta = Math.asin(c.R / r);
+  const beta = s.beta * d2r;
+  const Aarr = s.P / (c.G * c.eta * c.fill * Math.cos(beta));
+  // Radiators behind the arrays: the Sun-side face is perfectly insulated in proportion to how squarely it faces the arrays
+  const fFront = c.shade ? 1 - Math.cos(psi) * Math.cos(phi) : 1;
+  const emit2 = (1 + fFront) * c.eps * c.sigma * Math.pow(c.Trad, 4);
+  const ME = c.sigma * Math.pow(c.TE, 4);
+  const ef = earthFaces(psi, theta);
+  const earth = c.eps * ME * (ef[1] + fFront * ef[0]);
+  const lit = c.shade ? 0 : 1;   // radiators behind the arrays receive no direct sunlight
+  const sun = c.alpha * c.G * Math.cos(psi) * Math.cos(phi) * Math.cos(beta) * lit;
+  const qnet = emit2 - sun - earth;
+  const Arad = s.P / qnet;
+  const dw = c.crosswind ? Math.atan(c.omegaE * r * 0.99 / v) : 0;   // peak co-rotation crosswind angle (sin of the SSO inclination is about 0.99)
+  const dEff = meanTilt(dl, dw);                                     // orbit-mean tilt: pointing error plus crosswind
+  const ramFrac = Math.min(1, Math.cos(psi) * Math.abs(Math.sin(phi)) + dEff);
+  const Abus = c.Abus5 * s.P / 5e6;
+  const Aedge = c.t * (Math.sqrt(Aarr) + Math.sqrt(Arad));
+  const Aram = Aarr * dEff + Arad * ramFrac + Abus + Aedge;
+  const F = 0.5 * rho * v * v * c.Cd * Aram;
+  const Pr = c.G / c.cLight;
+  const FsrpArr = Pr * Aarr * Math.cos(beta) * c.CrrArr;
+  const FsrpRad = Pr * Arad * Math.cos(psi) * Math.cos(phi) * Math.cos(beta) * c.CrrRad * lit;
+  const Fsrp = FsrpArr + FsrpRad;
+  const Ttot = Math.hypot(F, s.comp / 100 * Fsrp);   // drag is along the velocity, radiation pressure along the Sun line
+  const ve = c.g0 * s.isp;
+  const propYr = Ttot * c.yr / ve;
+  const propTot = propYr * s.life;
+  const chemTot = Ttot * c.yr * s.life / (c.g0 * c.ispChem);
+  const dry = (c.kc * s.P / 1e3 + c.sigArr * Aarr + c.sigRad * Arad) / (1 - c.busFrac);
+  const dvYr = F * c.yr / dry;
+  const B = c.Cd * Aram / dry;
+  let tDeorbit = 0;
+  for (let h = c.hEnd + 0.5; h < s.alt; h += 1) {
+    const rh = density(h, s.f107);
+    tDeorbit += 1e3 / (rh * B * Math.sqrt(c.mu * (c.R + h * 1e3)));
+  }
+  const decay0 = rho * B * Math.sqrt(c.mu * r) * c.yr / 1e3;
+  const payload = s.payload * 1e3;
+  return { Ttot, Fsrp, FsrpArr, FsrpRad, dw, dEff, Aedge, B, tDeorbit, decay0, rho, v, Aarr, qnet, sun, earth, emit2, Arad, ramFrac, Abus, Aram, F, propYr, propTot, chemTot, dry, dvYr,
+           launches: (dry + propTot) / payload, launchesDry: dry / payload, launchesProp: propTot / payload,
+           launchesChem: (dry + chemTot) / payload };
+}
+function hallPoint(F, isp, amuMass, c) {
+  const ve = c.g0 * isp;                       // effective exhaust velocity, thrust / total mass flow
+  const mdot = F / ve;                         // total propellant flow
+  const mi = amuMass * c.amu;
+  const vi = ve / (c.gamma * c.etaM);          // axial ion velocity needed
+  const Vd = mi * vi * vi / (2 * c.e * c.etaV); // discharge voltage
+  const Ib = c.etaM * mdot * c.e / mi;         // ion beam current, singly charged
+  const Id = Ib / c.etaB;                      // discharge current
+  const etaT = c.gamma * c.gamma * c.etaM * c.etaV * c.etaB;
+  const Pin = 0.5 * F * ve / etaT;             // = Id * Vd
+  const Videal = mi * ve * ve / (2 * c.e);
+  return { ve, mdot, vi, Vd, Videal, Ib, Id, etaT, Pin };
+}
+/*MODEL_END*/
+
+const PROPS = [
+  { id: 'Xe', amu: 131.293, name: 'Xenon', tons: 50 },
+  { id: 'Kr', amu: 83.798, name: 'Krypton', tons: 300 },
+  { id: 'Ar', amu: 39.948, name: 'Argon', tons: 9.1e6 },
+  { id: 'Zn', amu: 65.38, name: 'Zinc', tons: 1.3e7 },
+  { id: 'Bi', amu: 208.98, name: 'Bismuth', tons: 1.6e4 }
+];
+const S0 = { P: 5e6, N: 1, life: 10, phi: 90, psi: 0, delta: 2, alt: 500, f107: 150, isp: 1800, payload: 100, prop: 'Kr', beta: 0, comp: 5 };
+const S = Object.assign({}, S0);
+const KD = Object.assign({}, K);
+
+/* ---------- formatting ---------- */
+const nf = (x, d) => x.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+function sig3(x) { const a = Math.abs(x); return a >= 100 ? nf(x, 0) : a >= 10 ? nf(x, 1) : a >= 1 ? nf(x, 2) : nf(x, 3); }
+function fmtMass(kg) {
+  if (kg < 1e3) return { n: sig3(kg), u: 'kg' };
+  if (kg < 1e6) return { n: sig3(kg / 1e3), u: 't' };
+  if (kg < 1e9) return { n: sig3(kg / 1e6), u: 'kt' };
+  return { n: sig3(kg / 1e9), u: 'Mt' };
+}
+const massStr = kg => { const m = fmtMass(kg); return m.n + ' ' + m.u; };
+function fmtForce(N) { return N < 0.01 ? { n: sig3(N * 1e3), u: 'mN' } : N < 1e3 ? { n: sig3(N), u: 'N' } : { n: sig3(N / 1e3), u: 'kN' }; }
+function fmtPower(W) { return W >= 1e9 ? sig3(W / 1e9) + ' GW' : W >= 1e6 ? sig3(W / 1e6) + ' MW' : sig3(W / 1e3) + ' kW'; }
+function fmtArea(m2) { return m2 >= 1e6 ? nf(m2 / 1e6, 2) + ' km\u00B2' : nf(m2, 0) + ' m\u00B2'; }
+function fmtCount(x) { return x < 10 ? nf(x, 1) : nf(x, 0); }
+function fmtShare(sh) {
+  if (sh >= 10) return { n: nf(sh, 0), u: '\u00D7 world output' };
+  if (sh >= 1) return { n: nf(sh, 1), u: '\u00D7 world output' };
+  const p = sh * 100;
+  if (p < 0.0001) return { n: '<0.0001', u: '%' };
+  return { n: p >= 10 ? nf(p, 0) : p >= 1 ? nf(p, 1) : p >= 0.01 ? nf(p, 2) : nf(p, 4), u: '%' };
+}
+function fmtTime(s) {
+  const d = s / 86400;
+  if (d < 60) return { n: sig3(d), u: 'days' };
+  if (d < 730) return { n: sig3(d / 30.44), u: 'months' };
+  return { n: sig3(d / 365.25), u: 'years' };
+}
+const timeStr = s => { const t = fmtTime(s); return t.n + ' ' + t.u; };
+function fmtW(W) {
+  if (W < 1e3) return { n: sig3(W), u: 'W' };
+  if (W < 1e6) return { n: sig3(W / 1e3), u: 'kW' };
+  if (W < 1e9) return { n: sig3(W / 1e6), u: 'MW' };
+  return { n: sig3(W / 1e9), u: 'GW' };
+}
+function fmtAmp(A) { return A < 1 ? { n: sig3(A * 1e3), u: 'mA' } : A < 1e3 ? { n: sig3(A), u: 'A' } : A < 1e6 ? { n: sig3(A / 1e3), u: 'kA' } : { n: sig3(A / 1e6), u: 'MA' }; }
+const shareStr = sh => { const f = fmtShare(sh); return f.u === '%' ? f.n + '%' : f.n + '\u00D7 world output'; };
+
+/* ---------- controls ---------- */
+const $ = id => document.getElementById(id);
+const logMap = (pos, lo, hi) => Math.pow(10, Math.log10(lo) + (pos / 1000) * (Math.log10(hi) - Math.log10(lo)));
+const logPos = (v, lo, hi) => Math.round(1000 * (Math.log10(v) - Math.log10(lo)) / (Math.log10(hi) - Math.log10(lo)));
+
+const CONTROLS = [
+  { key: 'phi', grp: 'g-orient', label: 'Radiator rotation \u03C6', min: 0, max: 90, step: 1, fmt: v => v + '\u00B0', hint: '0\u00B0 is coplanar with the arrays. 90\u00B0 faces the wind.' },
+  { key: 'psi', grp: 'g-orient', label: 'Radiator tilt toward Earth \u03C8', min: 0, max: 90, step: 1, fmt: v => v + '\u00B0', hint: '90\u00B0 puts the plate normal along nadir: edge-on to wind and Sun.' },
+  { key: 'delta', grp: 'g-orient', label: 'Pointing error, arrays and radiators', min: 0, max: 10, step: 0.1, fmt: v => v.toFixed(1) + '\u00B0', hint: 'Ram area of the arrays is area times sin of this angle.' },
+  { key: 'P', grp: 'g-dc', label: 'Compute power per spacecraft', log: [1e5, 5e9], fmt: fmtPower, hint: 'Log scale, 100 kW to 5 GW. Starmind is about 200 kW per satellite, and Starcloud proposes 5 GW.' },
+  { key: 'N', grp: 'g-dc', label: 'Number of spacecraft', log: [1, 1000], int: true, fmt: v => nf(Math.round(v), 0), hint: 'Propellant and launches are fleet totals. Forces and thruster values are per spacecraft. The buttons go beyond the slider.' },
+  { key: 'life', grp: 'g-dc', label: 'Mission life', min: 1, max: 20, step: 1, fmt: v => v + ' yr', hint: 'Propellant grows in direct proportion.' },
+  { key: 'alt', grp: 'g-orbit', label: 'Altitude', min: 400, max: 800, step: 10, fmt: v => v + ' km', hint: 'Density comes from an NRLMSIS table, 200 to 900 km.' },
+  { key: 'f107', grp: 'g-orbit', label: 'Solar activity, F10.7', min: 70, max: 250, step: 5, fmt: v => v + ' sfu', hint: 'About 70 at solar minimum, 150 moderate, 250 at maximum.' },
+  { key: 'beta', grp: 'g-srp', label: 'Sun offset from orbit normal', min: 0, max: 31, step: 1, fmt: v => v + '\u00B0', hint: 'Arrays stay fixed to the orbit frame, so the offset costs array area (1 over cosine) instead of drag. It reaches about 31\u00B0 in some seasons.' },
+  { key: 'comp', grp: 'g-srp', label: 'Radiation pressure cancelled', min: 0, max: 100, step: 5, fmt: v => v + '%', hint: 'Drag must always be cancelled. About 5% of radiation pressure covers its along-track part from pointing error. A steady push along the Sun line mostly averages out over an orbit, so 100% is a conservative ceiling.' },
+  { key: 'isp', grp: 'g-prop', label: 'Hall thruster Isp', min: 1200, max: 3000, step: 50, fmt: v => nf(v, 0) + ' s', hint: 'Set by discharge voltage, not by propellant.' },
+  { key: 'payload', grp: 'g-prop', label: 'Launcher payload to orbit', min: 50, max: 150, step: 5, fmt: v => v + ' t', hint: 'Speculative for Starship to sun-synchronous orbit.' }
+];
+
+function buildControls() {
+  ['g-orient', 'g-dc', 'g-orbit', 'g-srp', 'g-prop', 'prop-chips', 'orient-presets', 'power-presets', 'assume', 'supplyin'].forEach(id => { $(id).innerHTML = ''; });
+  CONTROLS.forEach(c => {
+    const box = document.createElement('div');
+    box.className = 'ctl';
+    const id = 'in-' + c.key;
+    box.innerHTML = '<div class="top"><label for="' + id + '">' + c.label + '</label><output id="o-' + c.key + '"></output></div>' +
+      '<input type="range" id="' + id + '" ' + (c.log ? 'min="0" max="1000" step="1"' : 'min="' + c.min + '" max="' + c.max + '" step="' + c.step + '"') + '>' +
+      '<p class="hint" id="hint-' + c.key + '">' + c.hint + '</p>';
+    $(c.grp).appendChild(box);
+    const inp = box.querySelector('input');
+    inp.addEventListener('input', () => {
+      S[c.key] = c.log ? logMap(+inp.value, c.log[0], c.log[1]) : +inp.value;
+      if (c.int) S[c.key] = Math.max(1, Math.round(S[c.key]));
+      update();
+    });
+  });
+  const xw = document.createElement('label');
+  xw.className = 'hint'; xw.style.display = 'block'; xw.style.marginBottom = '12px';
+  xw.innerHTML = '<input type="checkbox" id="xw" checked> Include co-rotation crosswind (the air moves with the Earth, so it meets a polar orbit at up to about 4\u00B0)';
+  $('g-orient').appendChild(xw);
+  const sh = document.createElement('label');
+  sh.className = 'hint'; sh.style.display = 'block'; sh.style.marginBottom = '12px';
+  sh.innerHTML = '<input type="checkbox" id="shade" checked> Radiators sit behind the arrays, in their shadow. The face toward the arrays is insulated in proportion to how squarely it faces them.';
+  $('g-orient').appendChild(sh);
+  sh.querySelector('input').addEventListener('change', e => { KD.shade = e.target.checked ? 1 : 0; update(); });
+  xw.querySelector('input').addEventListener('change', e => { KD.crosswind = e.target.checked ? 1 : 0; update(); });
+  const nBox = $('in-N').closest('.ctl');
+  const fp = document.createElement('div');
+  fp.className = 'chips'; fp.id = 'fleet-presets'; fp.style.marginTop = '6px';
+  nBox.insertBefore(fp, nBox.querySelector('.hint'));
+  presets('fleet-presets', [['1', { N: 1 }], ['1,000', { N: 1000 }], ['1 million', { N: 1e6 }]]);
+  const pc = $('prop-chips');
+  PROPS.forEach(p => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'chip'; b.textContent = p.name; b.dataset.id = p.id;
+    b.addEventListener('click', () => { S.prop = p.id; update(); });
+    pc.appendChild(b);
+  });
+  presets('orient-presets', [
+    ['Coplanar', { phi: 0, psi: 0 }], ['Ram-facing', { phi: 90, psi: 0 }], ['Earth-normal', { phi: 0, psi: 90 }]]);
+  presets('power-presets', [
+    ['200 kW', { P: 2e5 }], ['1 MW', { P: 1e6 }], ['5 MW', { P: 5e6 }], ['100 MW', { P: 1e8 }], ['1 GW', { P: 1e9 }], ['5 GW', { P: 5e9 }]]);
+
+  const A = $('assume');
+  [['Cell efficiency', 'eta', 0.01], ['Packing fraction', 'fill', 0.01], ['Array mass, kg/m\u00B2', 'sigArr', 0.1],
+   ['Radiator mass, kg/m\u00B2', 'sigRad', 0.5], ['Compute mass, kg/kW', 'kc', 0.5], ['Bus, share of dry mass', 'busFrac', 0.01],
+   ['Drag coefficient', 'Cd', 0.1], ['Radiator emissivity', 'eps', 0.01], ['Radiator solar absorptivity', 'alpha', 0.01],
+   ['Radiator temperature, K', 'Trad', 1], ['Earth effective temperature, K', 'TE', 1], ['Bus frontal area at 5 MW, m\u00B2', 'Abus5', 5],
+   ['Voltage utilization', 'etaV', 0.01], ['Propellant utilization', 'etaM', 0.01], ['Beam divergence factor', 'gamma', 0.01], ['Current utilization', 'etaB', 0.01],
+   ['Hydrazine Isp, s', 'ispChem', 5], ['Reentry altitude, km', 'hEnd', 10], ['Structure edge thickness, m', 't', 0.05], ['Array radiation pressure coefficient', 'CrrArr', 0.05], ['Radiator radiation pressure coefficient', 'CrrRad', 0.05]].forEach(([lab, key, st]) => {
+    const l = document.createElement('label'); l.textContent = lab; l.htmlFor = 'a-' + key;
+    const i = document.createElement('input'); i.type = 'number'; i.id = 'a-' + key; i.step = String(st); i.value = KD[key];
+    i.addEventListener('input', () => { const v = parseFloat(i.value); if (isFinite(v) && v > 0) { KD[key] = v; update(); } });
+    A.appendChild(l); A.appendChild(i);
+  });
+  const SP = $('supplyin');
+  PROPS.forEach(p => {
+    const l = document.createElement('label'); l.textContent = p.name; l.htmlFor = 's-' + p.id;
+    const i = document.createElement('input'); i.type = 'number'; i.id = 's-' + p.id; i.value = p.tons; i.step = 'any';
+    i.addEventListener('input', () => { const v = parseFloat(i.value); if (isFinite(v) && v > 0) { p.tons = v; update(); } });
+    SP.appendChild(l); SP.appendChild(i);
+  });
+}
+function presets(id, list) {
+  const el = $(id);
+  list.forEach(([name, vals]) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'chip'; b.textContent = name;
+    b.addEventListener('click', () => { Object.assign(S, vals); update(); });
+    b.dataset.vals = JSON.stringify(vals);
+    el.appendChild(b);
+  });
+}
+function syncControls() {
+  CONTROLS.forEach(c => {
+    const inp = $('in-' + c.key);
+    const want = c.log ? logPos(S[c.key], c.log[0], c.log[1]) : S[c.key];
+    if (+inp.value !== want) inp.value = want;
+    $('o-' + c.key).textContent = c.fmt(S[c.key]);
+  });
+  document.querySelectorAll('#prop-chips .chip').forEach(b => b.setAttribute('aria-pressed', b.dataset.id === S.prop));
+  document.querySelectorAll('#orient-presets .chip, #power-presets .chip, #fleet-presets .chip').forEach(b => {
+    const v = JSON.parse(b.dataset.vals);
+    b.setAttribute('aria-pressed', Object.keys(v).every(k => Math.abs(S[k] - v[k]) < (k === 'P' ? v[k] * 0.02 : 0.5)));
+  });
+}
+
+/* ---------- scene ---------- */
+function drawScene(m) {
+  const shade = KD.shade;
+  const Lr = 190, La = shade ? 400 : 250;
+  const ax = shade ? 330 : 205, ay = 108;
+  const rx = shade ? 330 : 490, ry = shade ? 262 : 108;
+  const phiR = S.phi * Math.PI / 180, psiR = S.psi * Math.PI / 180;
+  const thick = 8 + 64 * Math.sin(psiR);
+  const projR = Lr * m.ramFrac;
+  const projA = La * Math.sin(m.dEff);
+  const hitsR = y => Math.abs(y - ry) <= projR / 2;
+  const hitsA = y => Math.abs(y - ay) <= projA / 2;
+  let streaks = '';
+  for (let y = 44; y <= 356; y += 18) {
+    const hr = hitsR(y), ha = hitsA(y), hit = hr || ha;
+    const stop = hr ? rx + (Lr / 2) * Math.cos(phiR) + (thick / 2) * Math.sin(phiR) + 8 : ha ? ax + La / 2 + 8 : 120;
+    const col = hit ? 'var(--drag)' : 'var(--wind)', w = hit ? 2.4 : 1.2, dash = hit ? '' : ' stroke-dasharray="6 7" opacity=".7"';
+    streaks += '<line x1="700" y1="' + y + '" x2="' + stop + '" y2="' + y + '" stroke="' + col + '" stroke-width="' + w + '"' + dash + '/>' +
+      '<path d="M' + (stop + 10) + ' ' + (y - 4) + ' L' + stop + ' ' + y + ' L' + (stop + 10) + ' ' + (y + 4) + '" fill="none" stroke="' + col + '" stroke-width="' + w + '"' + (hit ? '' : ' opacity=".7"') + '/>';
+  }
+  let rays = '';
+  for (let x = 110; x <= 690; x += 40) {
+    const blocked = x >= ax - La / 2 && x <= ax + La / 2;
+    rays += '<line x1="' + x + '" y1="20" x2="' + x + '" y2="' + (blocked ? ay - 6 : 352) + '" stroke="var(--sun)" stroke-width="1" opacity=".4"/>';
+  }
+  const svg =
+    '<defs><marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--ink)"/></marker>' +
+    '<marker id="as" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--sun)"/></marker></defs>' +
+    '<rect x="' + (ax - La / 2) + '" y="' + ay + '" width="' + La + '" height="' + (352 - ay) + '" fill="var(--line)" opacity=".35"/>' +
+    '<text class="t" x="' + (ax - La / 2 + 6) + '" y="346">shadow of the arrays</text>' +
+    rays + streaks +
+    '<line x1="60" y1="330" x2="60" y2="70" stroke="var(--sun)" stroke-width="2.5" marker-end="url(#as)"/>' +
+    '<circle cx="60" cy="52" r="13" fill="var(--sun)"/>' +
+    '<text class="tb" x="82" y="58">Sun, along the orbit normal</text>' +
+    '<g transform="rotate(' + (-S.phi) + ' ' + rx + ' ' + ry + ')"><rect x="' + (rx - Lr / 2) + '" y="' + (ry - thick / 2) + '" width="' + Lr + '" height="' + thick + '" rx="2" fill="var(--cool)"/></g>' +
+    '<circle cx="' + rx + '" cy="' + ry + '" r="5" fill="var(--ink)"/>' +
+    '<g transform="rotate(' + (-S.delta) + ' ' + ax + ' ' + ay + ')"><rect x="' + (ax - La / 2) + '" y="' + (ay - 4) + '" width="' + La + '" height="8" rx="2" fill="var(--sun)"/></g>' +
+    '<text class="tb" x="' + (ax - La / 2) + '" y="' + (ay + 28) + '">Solar arrays, facing the Sun</text>' +
+    '<text class="tb" x="' + (rx - Lr / 2) + '" y="' + (ry - (shade ? 62 : 70)) + '">Radiator, ' + (shade ? 'in the arrays\u2019 shadow' : 'in sunlight') + '</text>' +
+    '<text class="td" x="690" y="' + Math.max(34, ry - Math.max(projR / 2, 8) - 10) + '" text-anchor="end">' + (m.ramFrac > 0.03 ? 'wind hits ' + nf(m.ramFrac * 100, 0) + '% of the radiator' : 'radiator edge-on') + '</text>' +
+    '<line x1="130" y1="368" x2="250" y2="368" stroke="var(--ink)" stroke-width="2" marker-end="url(#ah)"/>' +
+    '<text class="t" x="260" y="372">velocity</text>' +
+    '<text class="t" x="700" y="372" text-anchor="end">View from zenith, Earth beneath the page. Not to scale.</text>';
+  $('scene').innerHTML = svg;
+}
+
+function drawScene3d() {
+  const d2r = Math.PI / 180, phi = S.phi * d2r, psi = S.psi * d2r, shade = KD.shade;
+  const Wr = 100, Hr = 70, Wa = 130, Ha = 90, cx = 190, cy = 190;
+  const proj = (p) => [cx + p[0] - 0.6 * p[1], cy - p[2] + 0.4 * p[1]];
+  const N0 = [-Math.sin(phi), Math.cos(phi), 0];
+  const e1 = [Math.cos(phi), Math.sin(phi), 0];
+  const N = [Math.cos(psi) * N0[0], Math.cos(psi) * N0[1], Math.sin(psi)];
+  const e2 = [-Math.sin(psi) * N0[0], -Math.sin(psi) * N0[1], Math.cos(psi)];
+  const rc = shade ? [0, -70, 0] : [88, 60, 0];
+  const ac = shade ? [0, 60, 0] : [-78, 60, 0];
+  const pt = (c, a, b, u, v) => proj([c[0] + a * u[0] + b * v[0], c[1] + a * u[1] + b * v[1], c[2] + a * u[2] + b * v[2]]);
+  const poly = (c, W, H, u, v) => [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(k => pt(c, k[0] * W / 2, k[1] * H / 2, u, v).map(x => x.toFixed(1)).join(',')).join(' ');
+  const sunF = shade ? 0 : Math.max(0, Math.cos(phi) * Math.cos(psi)), windF = Math.abs(Math.sin(phi)) * Math.cos(psi);
+  let pipes = '';
+  for (let i = 1; i < 8; i++) {
+    const a = -Wr / 2 + i * Wr / 8, q1 = pt(rc, a, -Hr / 2, e1, e2), q2 = pt(rc, a, Hr / 2, e1, e2);
+    pipes += '<line x1="' + q1[0].toFixed(1) + '" y1="' + q1[1].toFixed(1) + '" x2="' + q2[0].toFixed(1) + '" y2="' + q2[1].toFixed(1) + '" stroke="var(--panel)" stroke-opacity=".75" stroke-width="1.6"/>';
+  }
+  const rcp = proj(rc);
+  const n1 = proj([rc[0] - 60 * N[0], rc[1] - 60 * N[1], rc[2] - 60 * N[2]]), n2 = proj([rc[0] + 60 * N[0], rc[1] + 60 * N[1], rc[2] + 60 * N[2]]);
+  const a1 = proj([rc[0], rc[1], -80]), a2 = proj([rc[0], rc[1], 80]);
+  let wind = '';
+  for (let y = 84; y <= 300; y += 36) wind += '<line x1="368" y1="' + y + '" x2="40" y2="' + y + '" stroke="var(--wind)" stroke-width="1.2" stroke-dasharray="6 7" opacity=".6"/><path d="M50 ' + (y - 4) + ' L40 ' + y + ' L50 ' + (y + 4) + '" fill="none" stroke="var(--wind)" stroke-width="1.2" opacity=".6"/>';
+  const arr = pt(ac, -Wa / 2, Ha / 2, [1, 0, 0], [0, 0, 1]);
+  $('scene3d').innerHTML =
+    '<text class="tb" x="8" y="20">Seen from the Sun</text>' + wind +
+    '<line x1="' + a1[0].toFixed(1) + '" y1="' + a1[1].toFixed(1) + '" x2="' + a2[0].toFixed(1) + '" y2="' + a2[1].toFixed(1) + '" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 4"/>' +
+    '<polygon points="' + poly(rc, Wr, Hr, [1, 0, 0], [0, 0, 1]) + '" fill="none" stroke="var(--muted)" stroke-width="1.2" stroke-dasharray="5 5"/>' +
+    '<polygon points="' + poly(rc, Wr, Hr, e1, e2) + '" fill="var(--cool)" fill-opacity=".92" stroke="var(--sun)" stroke-width="' + (1.5 + 7 * sunF).toFixed(1) + '" stroke-linejoin="round"/>' +
+    '<polygon points="' + poly(rc, Wr, Hr, e1, e2) + '" fill="none" stroke="var(--ink)" stroke-width="1.5" stroke-linejoin="round"/>' + pipes +
+    '<line x1="' + n1[0].toFixed(1) + '" y1="' + n1[1].toFixed(1) + '" x2="' + n2[0].toFixed(1) + '" y2="' + n2[1].toFixed(1) + '" stroke="var(--ink)" stroke-width="2"/>' +
+    '<circle cx="' + n2[0].toFixed(1) + '" cy="' + n2[1].toFixed(1) + '" r="4" fill="var(--ink)"/>' +
+    '<polygon points="' + poly(ac, Wa, Ha, [1, 0, 0], [0, 0, 1]) + '" fill="var(--sun)" fill-opacity=".30" stroke="var(--sun)" stroke-width="2.5" stroke-linejoin="round"/>' +
+    '<text class="tb" x="' + Math.max(6, arr[0] - 2).toFixed(1) + '" y="' + (arr[1] - 8).toFixed(1) + '">Arrays</text>' +
+    '<text class="tb" x="' + (rcp[0] + 44).toFixed(1) + '" y="' + (rcp[1] - 52).toFixed(1) + '">Radiator</text>' +
+    '<text class="t" x="372" y="72" text-anchor="end">wind</text>' +
+    '<text class="t" x="8" y="326">Dashed: coplanar position. Black line: plate normal.</text>' +
+    '<text class="t" x="8" y="342">' + (shade ? 'Radiator sits behind the arrays, out of the Sun.' : 'Radiator sits beside the arrays, in sunlight.') + '</text>' +
+    '<text class="tb" x="8" y="366">Sunlit ' + nf(sunF * 100, 0) + '%</text>' +
+    '<text class="tb" x="200" y="366">Faces the wind ' + nf(windF * 100, 0) + '%</text>';
+}
+
+/* ---------- small charts ---------- */
+function drawChart(id, fn, fmtY, color) {
+  const xs = []; for (let x = 0; x <= 90; x += 5) xs.push(x);
+  const ys = xs.map(x => fn(x));
+  const cur = fn(S.phi);
+  const ymax = Math.max.apply(null, ys.concat([cur])) * 1.1;
+  const L = 90, Rr = 326, T = 14, B = 112;
+  const px = x => L + (x / 90) * (Rr - L);
+  const py = y => B - (y / ymax) * (B - T);
+  const d = xs.map((x, i) => (i ? 'L' : 'M') + px(x).toFixed(1) + ' ' + py(ys[i]).toFixed(1)).join(' ');
+  $(id).innerHTML =
+    '<line class="axis" x1="' + L + '" y1="' + B + '" x2="' + Rr + '" y2="' + B + '"/><line class="axis" x1="' + L + '" y1="' + T + '" x2="' + L + '" y2="' + B + '"/>' +
+    '<text class="t" x="' + (L - 6) + '" y="' + (T + 4) + '" text-anchor="end">' + fmtY(ymax) + '</text>' +
+    '<text class="t" x="' + (L - 6) + '" y="' + (B + 4) + '" text-anchor="end">0</text>' +
+    [0, 45, 90].map(x => '<text class="t" x="' + px(x) + '" y="' + (B + 18) + '" text-anchor="middle">' + x + '\u00B0</text>').join('') +
+    '<path d="' + d + '" fill="none" stroke="' + color + '" stroke-width="2.4"/>' +
+    '<line x1="' + px(S.phi) + '" y1="' + py(cur) + '" x2="' + px(S.phi) + '" y2="' + B + '" stroke="var(--ink)" stroke-dasharray="3 3" opacity=".5"/>' +
+    '<circle cx="' + px(S.phi) + '" cy="' + py(cur) + '" r="6" fill="' + color + '" stroke="var(--panel)" stroke-width="2"/>' +
+    '<text class="tb" x="' + Math.min(px(S.phi) + 10, Rr - 4) + '" y="' + (py(cur) - 10) + '" text-anchor="' + (S.phi > 60 ? 'end' : 'start') + '">' + fmtY(cur) + '</text>';
+}
+
+function wedge(p, cls) {
+  const k = 3.5, hmin = 0.12, top = 1, base = 30, hh = base - top;
+  const y = x => base - hh * (hmin + (1 - hmin) * (0.45 * x + 0.55 * (Math.exp(k * x) - 1) / (Math.exp(k) - 1)));
+  const pt = x => (x * 100).toFixed(2) + ',' + y(x).toFixed(2);
+  const N = 40;
+  let bg = '0,30', fl = '0,30';
+  for (let i = 0; i <= N; i++) bg += ' ' + pt(i / N);
+  bg += ' 100,30';
+  const has = p > 0.002;
+  if (has) { for (let i = 0; i <= N; i++) fl += ' ' + pt(p * i / N); fl += ' ' + (p * 100).toFixed(2) + ',30'; }
+  return '<svg class="wedge" viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden="true"><polygon class="wbg" points="' + bg + '"/>' +
+    (has ? '<polygon class="wf ' + cls + '" points="' + fl + '"/>' : '') + '</svg>';
+}
+function drawMoon(m) {
+  const MOON_DEG = 0.5181;                                   // mean angular diameter of the Moon
+  const side = Math.sqrt(m.Aarr);                            // square array, m
+  const theta = 2 * Math.atan(side / 2 / (S.alt * 1e3)) * 180 / Math.PI;
+  const ratio = theta / MOON_DEG;
+  let moonPx = 140, sqPx = moonPx * ratio;
+  if (sqPx > 190) { moonPx *= 190 / sqPx; sqPx = 190; }
+  const r = moonPx / 2, cy = 112, mx = 120, sx = 318;
+  const tiny = sqPx < 6, draw = Math.max(sqPx, 1.6);
+  const patch = (dx, dy, rr, o) => '<circle cx="' + (mx + dx * r).toFixed(1) + '" cy="' + (cy + dy * r).toFixed(1) + '" r="' + (rr * r).toFixed(1) + '" fill="#8E8E86" opacity="' + o + '"/>';
+  $('moon').innerHTML =
+    '<defs><radialGradient id="mg" cx="38%" cy="34%" r="75%"><stop offset="0" stop-color="#EDEDE6"/><stop offset="1" stop-color="#BDBDB4"/></radialGradient></defs>' +
+    '<circle cx="' + mx + '" cy="' + cy + '" r="' + r.toFixed(1) + '" fill="url(#mg)" stroke="var(--muted)" stroke-width="1.5"/>' +
+    patch(-0.30, -0.25, 0.26, 0.35) + patch(0.25, -0.35, 0.18, 0.30) + patch(0.10, 0.25, 0.30, 0.28) + patch(-0.40, 0.30, 0.12, 0.30) + patch(0.45, 0.05, 0.10, 0.30) +
+    '<text class="tb" x="' + mx + '" y="' + (cy - r - 12).toFixed(1) + '" text-anchor="middle">Moon</text>' +
+    '<text class="t" x="' + mx + '" y="' + (cy + r + 22).toFixed(1) + '" text-anchor="middle">0.52\u00B0</text>' +
+    '<rect x="' + (sx - draw / 2).toFixed(1) + '" y="' + (cy - draw / 2).toFixed(1) + '" width="' + draw.toFixed(1) + '" height="' + draw.toFixed(1) + '" fill="var(--sun)" fill-opacity=".35" stroke="var(--sun)" stroke-width="' + (tiny ? 1.6 : 2.5) + '"/>' +
+    (tiny ? '<circle cx="' + sx + '" cy="' + cy + '" r="11" fill="none" stroke="var(--sun)" stroke-width="1.2" stroke-dasharray="3 3"/>' : '') +
+    '<text class="tb" x="' + sx + '" y="' + (cy - Math.max(draw / 2, 11) - 12).toFixed(1) + '" text-anchor="middle">Array</text>' +
+    '<text class="t" x="' + sx + '" y="' + (cy + Math.max(draw / 2, 11) + 22).toFixed(1) + '" text-anchor="middle">' + (theta < 1 / 60 ? nf(theta * 3600, 0) + '\u2033' : nf(theta, theta < 1 ? 2 : 1) + '\u00B0') + '</text>';
+  const len = side >= 1000 ? nf(side / 1000, 1) + ' km' : nf(side, 0) + ' m';
+  const rel = ratio >= 0.1 ? nf(ratio, 2) + '\u00D7 the Moon\u2019s width' : nf(ratio * 100, ratio < 0.01 ? 2 : 1) + '% of the Moon\u2019s width';
+  $('moon-cap').textContent = 'A ' + len + ' square array at ' + S.alt + ' km spans ' + (theta < 1 / 60 ? nf(theta * 3600, 0) + ' arcseconds' : nf(theta, 2) + '\u00B0') + ', which is ' + rel + '.' + (theta < 1 / 60 ? ' The naked eye sees a point of light.' : '');
+  $('moon-foot').textContent = 'Face-on and directly overhead, the largest it could look. A dawn-dusk array is edge-on to someone directly below, so the real view is foreshortened.';
+}
+
+/* ---------- update ---------- */
+function update() {
+  const m = model(S, KD);
+  syncControls();
+  const p = PROPS.find(x => x.id === S.prop);
+  const N = S.N;
+  const fleetYr = m.propYr * N, fleetTot = m.propTot * N, fleetChem = m.chemTot * N;
+  const share = fleetYr / 1e3 / p.tons;
+
+  const f = fmtForce(m.F), py = fmtMass(fleetYr), sh = fmtShare(share);
+  $('v-drag').innerHTML = f.n + '<small>' + f.u + '</small>';
+  $('s-drag').textContent = fmtArea(m.Aram) + ' facing the wind';
+  $('v-prop').innerHTML = py.n + '<small>' + py.u + '</small>';
+  $('l-prop').textContent = 'Propellant per year' + (N > 1 ? ', all ' + nf(N, 0) : '');
+  $('l-launch').textContent = 'Payload-equivalent launches' + (N > 1 ? ', all ' + nf(N, 0) : '');
+  $('s-prop').textContent = massStr(fleetTot) + ' over ' + S.life + ' years';
+  $('v-launch').innerHTML = fmtCount(m.launches * N) + '<small>launches</small>';
+  $('s-launch').textContent = massStr(m.dry) + ' dry plus ' + massStr(m.propTot) + ' propellant' + (N > 1 ? ', each' : '');
+  $('l-share').textContent = p.name + ' per year, against world output';
+  $('v-share').innerHTML = sh.n + '<small>' + sh.u.replace('world output', 'world') + '</small>';
+  $('s-share').textContent = share >= 1 ? 'more than is produced today' : 'of today\u2019s annual production';
+  $('ro-share').classList.toggle('hot', share >= 1);
+
+  let orient = 'radiators coplanar with the arrays';
+  if (S.psi > 89) orient = 'radiators with their normal along nadir';
+  else if (S.phi > 89 && S.psi < 1) orient = 'radiators facing the wind';
+  else if (S.phi > 0 || S.psi > 0) orient = 'radiators rotated \u03C6 = ' + S.phi + '\u00B0, tilted \u03C8 = ' + S.psi + '\u00B0';
+  const who = N > 1 ? nf(N, 0) + ' spacecraft of ' + fmtPower(S.P) + ' each' : fmtPower(S.P);
+  $('verdict').textContent = who + ' with ' + orient + (N > 1 ? ' need ' : ' needs ') + massStr(fleetYr) + ' of ' + p.name.toLowerCase() +
+    ' per year, which is ' + shareStr(share) + (share >= 1 ? '' : ' of today\u2019s production') + '. Over ' + S.life + ' years that is ' + massStr(fleetTot) + '.';
+
+  const fmx = Math.max(m.F, m.Fsrp, m.Ttot);
+  const frow = (name, val, cls) => { const f = fmtForce(val); return '<div class="row"><span>' + name + '</span><div class="track"><div class="bar ' + cls + '" style="width:' + Math.max(0.6, val / fmx * 100).toFixed(1) + '%"></div></div><span class="pct">' + f.n + ' ' + f.u + '</span></div>'; };
+  $('forces').innerHTML = frow('Atmospheric drag', m.F, 'd') + frow('Radiation pressure', m.Fsrp, 's') + frow(S.comp === 0 ? 'Thrust, drag only' : S.comp === 100 ? 'Thrust, drag + all radiation pressure' : 'Thrust, drag + ' + S.comp + '% of radiation pressure', m.Ttot, 't');
+  $('forces-note').textContent = 'Radiation pressure is ' + sig3(m.Fsrp / m.F) + '\u00D7 the drag' + (S.comp > 0 && S.comp < 100 ? ', and ' + S.comp + '% of it is cancelled.' : '.') + (S.comp > 0 ? ' The two act at right angles, so the thrust is their vector sum.' : ' Radiation pressure is left uncancelled.');
+  const edgeDeg = Math.atan(KD.t / Math.sqrt(m.Aarr)) * 180 / Math.PI;
+  $('hint-delta').textContent = 'Mean tilt ' + nf(m.dEff * 180 / Math.PI, 1) + '\u00B0 with the crosswind (' + nf(m.dw * 180 / Math.PI, 1) + '\u00B0 peak). Structure edges of ' + KD.t + ' m add ' + m.Aedge.toFixed(0) + ' m\u00B2, like a ' + nf(edgeDeg, edgeDeg < 0.1 ? 3 : 2) + '\u00B0 tilt of the arrays.';
+  const td = fmtTime(m.tDeorbit);
+  $('dline').innerHTML = 'Without thrusters, this data center falls from ' + S.alt + ' km to ' + KD.hEnd + ' km in <span class="big">' + td.n + '<small>' + td.u + '</small></span>';
+  $('s-deorbit').textContent = 'Altitude drops about ' + sig3(m.decay0) + ' km per year at first, then faster as the air thickens. Attitude held, dry mass, orbit-mean density: an order of magnitude.';
+
+  const hp = hallPoint(m.Ttot, S.isp, p.amu, KD);
+  const cell = (id, o) => { $(id).innerHTML = o.n + '<small>' + o.u + '</small>'; };
+  const flow = hp.mdot < 1e-3 ? { n: sig3(hp.mdot * 1e6), u: 'mg/s' } : hp.mdot < 1 ? { n: sig3(hp.mdot * 1e3), u: 'g/s' } : { n: sig3(hp.mdot), u: 'kg/s' };
+  $('hall-h').textContent = 'Hall thruster operating point' + (N > 1 ? ' per spacecraft' : '') + ': ' + p.name.toLowerCase() + ' at ' + nf(S.isp, 0) + ' s';
+  $('hall-note').textContent = 'Singly charged ions. Assumed losses: voltage ' + nf(KD.etaV * 100, 0) + '%, propellant ' + nf(KD.etaM * 100, 0) + '%, divergence factor ' + KD.gamma + ', current ' + nf(KD.etaB * 100, 0) + '%.';
+  cell('h-F', fmtForce(m.Ttot));
+  $('h-Fs').textContent = S.comp === 0 ? 'drag only' : S.comp === 100 ? 'drag plus all radiation pressure' : 'drag plus ' + S.comp + '% of radiation pressure'; cell('h-I', fmtAmp(hp.Id)); cell('h-Pe', fmtW(hp.Pin)); cell('h-m', flow);
+  $('h-V').innerHTML = nf(hp.Vd, 0) + '<small>V</small>';
+  $('h-Vs').textContent = nf(hp.Videal, 0) + ' V if lossless';
+  $('h-Is').textContent = fmtAmp(hp.Ib).n + ' ' + fmtAmp(hp.Ib).u + ' of it is ion beam';
+  $('h-Pes').textContent = nf(hp.etaT * 100, 0) + '% efficient, ' + nf(100 * hp.Pin / S.P, 2) + '% of compute power';
+  $('h-ms').textContent = 'of ' + p.name.toLowerCase();
+
+  drawScene(m);
+  drawScene3d();
+  drawMoon(m);
+  drawChart('c-area', x => model(Object.assign({}, S, { phi: x }), KD).Arad, v => fmtArea(v), 'var(--cool)');
+  drawChart('c-prop', x => model(Object.assign({}, S, { phi: x }), KD).propYr, v => massStr(v), 'var(--drag)');
+
+  /* supply bars: log10(share) from -7 (empty) to 0 (100%, full width); anything above 100% stays full */
+  const pos = sh_ => Math.max(0, Math.min(100, ((Math.log10(sh_) + 7) / 7) * 100));
+  $('supply').innerHTML = PROPS.map(q => {
+    const s2 = fleetYr / 1e3 / q.tons;
+    const cls = s2 >= 1 ? 'over' : s2 >= 0.1 ? 'mid' : '';
+    return '<div class="row' + (q.id === S.prop ? ' sel' : '') + '"><span class="nm">' + q.name + '</span>' +
+      wedge(pos(s2) / 100, cls) +
+      '<span class="pct">' + shareStr(s2).replace('\u00D7 world output', '\u00D7') + '</span></div>';
+  }).join('');
+  $('ticks').innerHTML = [[1e-6, '0.0001%'], [1e-4, '0.01%'], [1e-2, '1%'], [1, '100%']].map(t => '<span' + (t[0] >= 1 ? ' class="end"' : '') + ' style="left:' + pos(t[0]).toFixed(1) + '%">' + t[1] + '</span>').join('');
+
+  /* compare */
+  const mx = Math.max(fleetTot, fleetChem);
+  const row = (name, val, cls) =>
+    '<div class="row"><span>' + name + '</span><div class="track"><div class="bar ' + cls + '" style="width:' + Math.max(0.6, (val / mx) * 100).toFixed(1) + '%"></div></div><span class="pct">' + massStr(val) + '</span></div>';
+  $('compare').innerHTML = row('Hall thruster, ' + nf(S.isp, 0) + ' s', fleetTot, '') + row('Hydrazine, ' + KD.ispChem + ' s', fleetChem, 'chem') +
+    '<p class="note" style="margin-top:10px">Velocity lost to drag: ' + sig3(m.dvYr) + ' m/s per year.</p>';
+}
+
+/* theme */
+$('theme').addEventListener('click', () => {
+  const root = document.documentElement;
+  const dark = root.dataset.theme ? root.dataset.theme === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+  root.dataset.theme = dark ? 'light' : 'dark';
+});
+
+buildControls();
+update();
+</script>
+</body>
+</html>
