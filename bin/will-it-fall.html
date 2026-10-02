@@ -91,7 +91,7 @@ h2 { font-size: 16px; font-weight: 600; margin: 0 0 2px; }
 .ro, .ro .val { min-width: 0; }
 @media (max-width: 900px) { .readouts.five { grid-template-columns: repeat(2, minmax(0, 1fr)); } .readouts.five .ro:nth-child(odd) { padding-left: 0; border-left: 0; } .readouts.five .ro:nth-child(even) { padding-left: 16px; border-left: 1px solid var(--line); } }
 .compare.top { margin: 18px 0 4px; }
-.moonsec svg { width: 100%; max-width: 520px; height: auto; display: block; }
+.moonsec svg, .tanksec svg { width: 100%; max-width: 560px; height: auto; display: block; }
 .forces .bar.d { background: var(--drag); }
 .forces .bar.s { background: var(--sun); }
 .forces .bar.t { background: var(--ink); }
@@ -195,6 +195,12 @@ footer p { margin: 0 0 8px; }
         </div>
       </section>
 
+      <section class="full tanksec">
+        <h2>Propellant tank size for one spacecraft</h2>
+        <svg id="tanks" viewBox="0 0 560 285" role="img" aria-label="Relative size of the propellant tank for each propellant"></svg>
+        <p class="note" id="tank-cap"></p>
+      </section>
+
       <section class="full moonsec">
         <h2>The array next to the Moon, seen from the ground</h2>
         <svg id="moon" viewBox="0 0 440 220" role="img" aria-label="The Moon beside a square showing how large the solar array would look from the ground"></svg>
@@ -219,7 +225,7 @@ footer p { margin: 0 0 8px; }
         <div id="g-prop"></div>
       </fieldset>
       <details><summary>Assumptions you can edit</summary><div class="assume" id="assume"></div></details>
-      <details><summary>World production, tonnes per year</summary><div class="assume" id="supplyin"></div></details>
+      <details><summary>Production (t/yr) and metal density (kg/m³)</summary><div class="assume" id="supplyin"></div></details>
     </aside>
   </div>
 
@@ -237,7 +243,8 @@ const K = {
   eta: 0.22, fill: 0.90, sigArr: 2.0, sigRad: 5.0, kc: 10, busFrac: 0.20,
   Cd: 2.2, eps: 0.92, alpha: 0.09, Trad: 293.15, TE: 254.6,
   e: 1.602176634e-19, amu: 1.66053907e-27, etaV: 0.90, etaM: 0.80, gamma: 0.90, etaB: 0.85, Abus5: 30, ispChem: 225, hEnd: 200,
-  t: 0.3, CrrArr: 1.10, CrrRad: 1.60, cLight: 299792458, omegaE: 7.2921159e-5, crosswind: 1, shade: 1
+  t: 0.3, CrrArr: 1.10, CrrRad: 1.60, cLight: 299792458, omegaE: 7.2921159e-5, crosswind: 1, shade: 1,
+  tankEta: 12, metalKg: 25
 };
 
 const RHO_ALTS = [200, 225, 250, 275, 300, 325, 350, 375, 400, 425, 450, 475, 500, 525, 550, 575, 600, 625, 650, 675, 700, 725, 750, 775, 800, 825, 850, 875, 900];
@@ -348,13 +355,27 @@ function hallPoint(F, isp, amuMass, c) {
 /*MODEL_END*/
 
 const PROPS = [
-  { id: 'Xe', amu: 131.293, name: 'Xenon', tons: 50 },
-  { id: 'Kr', amu: 83.798, name: 'Krypton', tons: 300 },
-  { id: 'Ar', amu: 39.948, name: 'Argon', tons: 9.1e6 },
-  { id: 'Zn', amu: 65.38, name: 'Zinc', tons: 1.3e7 },
-  { id: 'Bi', amu: 208.98, name: 'Bismuth', tons: 1.6e4 }
+  { id: 'Xe', amu: 131.293, name: 'Xenon', dens: 1660, tons: 50 },
+  { id: 'Kr', amu: 83.798, name: 'Krypton', dens: 672, tons: 300 },
+  { id: 'Ar', amu: 39.948, name: 'Argon', dens: 271, tons: 9.1e6 },
+  { id: 'Zn', amu: 65.38, name: 'Zinc', dens: 7140, tons: 1.3e7 },
+  { id: 'Bi', amu: 208.98, name: 'Bismuth', dens: 9780, tons: 1.6e4 }
 ];
-const S0 = { P: 5e6, N: 1, life: 10, phi: 90, psi: 0, delta: 2, alt: 500, f107: 150, isp: 1800, payload: 100, prop: 'Kr', beta: 0, comp: 5 };
+// real-gas density at 340 K (hot case) by pressure, kg/m^3, from the CoolProp equations of state; pressures 20 to 500 bar in 10 bar steps
+const GAS_P0 = 20, GAS_DP = 10;
+const GAS_RHO = {
+  Xe: [100, 157, 220, 289, 368, 458, 562, 683, 821, 967, 1110, 1235, 1340, 1427, 1499, 1560, 1613, 1660, 1701, 1738, 1772, 1803, 1832, 1859, 1884, 1907, 1930, 1951, 1970, 1989, 2007, 2025, 2041, 2057, 2072, 2087, 2101, 2115, 2128, 2141, 2154, 2166, 2178, 2189, 2200, 2211, 2222, 2232, 2242],
+  Kr: [61, 92, 125, 158, 192, 226, 262, 298, 334, 371, 409, 447, 485, 523, 560, 598, 635, 672, 708, 743, 777, 811, 843, 875, 905, 934, 963, 990, 1016, 1042, 1066, 1090, 1112, 1134, 1155, 1176, 1195, 1214, 1232, 1250, 1267, 1284, 1300, 1316, 1331, 1345, 1360, 1374, 1387],
+  Ar: [28, 43, 57, 71, 86, 100, 115, 129, 144, 158, 172, 187, 201, 215, 229, 243, 257, 271, 284, 297, 311, 324, 337, 349, 362, 374, 386, 398, 410, 422, 433, 444, 455, 466, 477, 487, 497, 507, 517, 527, 536, 546, 555, 564, 573, 581, 590, 598, 606],
+};
+function gasDensity(id, bar) {
+  const arr = GAS_RHO[id];
+  let x = (bar - GAS_P0) / GAS_DP;
+  x = Math.max(0, Math.min(arr.length - 1.000001, x));
+  const i = Math.floor(x), f = x - i;
+  return (1 - f) * arr[i] + f * arr[i + 1];
+}
+const S0 = { P: 2e5, N: 1, life: 10, phi: 90, psi: 0, delta: 2.7, alt: 500, f107: 140, isp: 1800, payload: 100, prop: 'Kr', beta: 0, comp: 5, pStore: 190 };
 const S = Object.assign({}, S0);
 const KD = Object.assign({}, K);
 
@@ -412,6 +433,7 @@ const CONTROLS = [
   { key: 'beta', grp: 'g-srp', label: 'Sun offset from orbit normal', min: 0, max: 31, step: 1, fmt: v => v + '\u00B0', hint: 'Arrays stay fixed to the orbit frame, so the offset costs array area (1 over cosine) instead of drag. It reaches about 31\u00B0 in some seasons.' },
   { key: 'comp', grp: 'g-srp', label: 'Radiation pressure cancelled', min: 0, max: 100, step: 5, fmt: v => v + '%', hint: 'Drag must always be cancelled. About 5% of radiation pressure covers its along-track part from pointing error. A steady push along the Sun line mostly averages out over an orbit, so 100% is a conservative ceiling.' },
   { key: 'isp', grp: 'g-prop', label: 'Hall thruster Isp', min: 1200, max: 3000, step: 50, fmt: v => nf(v, 0) + ' s', hint: 'Set by discharge voltage, not by propellant.' },
+  { key: 'pStore', grp: 'g-prop', label: 'Gas tank pressure', min: 50, max: 450, step: 10, fmt: v => v + ' bar', hint: 'Hot-case tank pressure. Sets xenon, krypton, and argon storage density at 340 K.' },
   { key: 'payload', grp: 'g-prop', label: 'Launcher payload to orbit', min: 50, max: 150, step: 5, fmt: v => v + ' t', hint: 'Speculative for Starship to sun-synchronous orbit.' }
 ];
 
@@ -465,7 +487,7 @@ function buildControls() {
    ['Drag coefficient', 'Cd', 0.1], ['Radiator emissivity', 'eps', 0.01], ['Radiator solar absorptivity', 'alpha', 0.01],
    ['Radiator temperature, K', 'Trad', 1], ['Earth effective temperature, K', 'TE', 1], ['Bus frontal area at 5 MW, m\u00B2', 'Abus5', 5],
    ['Voltage utilization', 'etaV', 0.01], ['Propellant utilization', 'etaM', 0.01], ['Beam divergence factor', 'gamma', 0.01], ['Current utilization', 'etaB', 0.01],
-   ['Hydrazine Isp, s', 'ispChem', 5], ['Reentry altitude, km', 'hEnd', 10], ['Structure edge thickness, m', 't', 0.05], ['Array radiation pressure coefficient', 'CrrArr', 0.05], ['Radiator radiation pressure coefficient', 'CrrRad', 0.05]].forEach(([lab, key, st]) => {
+   ['Hydrazine Isp, s', 'ispChem', 5], ['Reentry altitude, km', 'hEnd', 10], ['Tank performance PV/W, km', 'tankEta', 1], ['Metal feed system and storage, kg', 'metalKg', 5], ['Structure edge thickness, m', 't', 0.05], ['Array radiation pressure coefficient', 'CrrArr', 0.05], ['Radiator radiation pressure coefficient', 'CrrRad', 0.05]].forEach(([lab, key, st]) => {
     const l = document.createElement('label'); l.textContent = lab; l.htmlFor = 'a-' + key;
     const i = document.createElement('input'); i.type = 'number'; i.id = 'a-' + key; i.step = String(st); i.value = KD[key];
     i.addEventListener('input', () => { const v = parseFloat(i.value); if (isFinite(v) && v > 0) { KD[key] = v; update(); } });
@@ -476,6 +498,12 @@ function buildControls() {
     const l = document.createElement('label'); l.textContent = p.name; l.htmlFor = 's-' + p.id;
     const i = document.createElement('input'); i.type = 'number'; i.id = 's-' + p.id; i.value = p.tons; i.step = 'any';
     i.addEventListener('input', () => { const v = parseFloat(i.value); if (isFinite(v) && v > 0) { p.tons = v; update(); } });
+    SP.appendChild(l); SP.appendChild(i);
+  });
+  PROPS.filter(p => p.id === 'Zn' || p.id === 'Bi').forEach(p => {
+    const l = document.createElement('label'); l.textContent = p.name + ' density'; l.htmlFor = 'd-' + p.id;
+    const i = document.createElement('input'); i.type = 'number'; i.id = 'd-' + p.id; i.value = p.dens; i.step = 'any';
+    i.addEventListener('input', () => { const v = parseFloat(i.value); if (isFinite(v) && v > 0) { p.dens = v; update(); } });
     SP.appendChild(l); SP.appendChild(i);
   });
 }
@@ -625,6 +653,52 @@ function wedge(p, cls) {
   return '<svg class="wedge" viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden="true"><polygon class="wbg" points="' + bg + '"/>' +
     (has ? '<polygon class="wf ' + cls + '" points="' + fl + '"/>' : '') + '</svg>';
 }
+function fmtVol(V) {
+  if (V >= 1000) return nf(V, 0) + ' m\u00B3';
+  if (V >= 10) return nf(V, 1) + ' m\u00B3';
+  if (V >= 1) return nf(V, 2) + ' m\u00B3';
+  const L = V * 1000;
+  return nf(L, L >= 10 ? 0 : 1) + ' L';
+}
+function fmtDim(d) { return d >= 10 ? nf(d, 0) + ' m' : d >= 1 ? nf(d, 1) + ' m' : nf(d * 100, 0) + ' cm'; }
+function drawTanks(m) {
+  const M = m.propTot;                                   // kg of propellant for one spacecraft over its mission
+  const items = PROPS.map(p => {
+    const solid = p.id === 'Zn' || p.id === 'Bi';
+    if (!solid) p.dens = gasDensity(p.id, S.pStore);     // hot-case fill density at the chosen tank pressure
+    const V = M / p.dens;
+    // pressure vessel: mass = P V / (eta g), with the tank full at the hot-case pressure; metals use a fixed reservoir share
+    const tank = solid ? KD.metalKg : S.pStore * 1e5 * V / (KD.tankEta * 1e3 * KD.g0);
+    return { p, V, solid, tank, dim: solid ? Math.cbrt(V) : Math.cbrt(6 * V / Math.PI) };   // cube side or sphere diameter, m
+  });
+  const dmax = Math.max.apply(null, items.map(i => i.dim));
+  const k = 108 / dmax, base = 150, x0 = 66, dx = 107;
+  let svg = '<line x1="8" y1="' + base + '" x2="552" y2="' + base + '" stroke="var(--line)" stroke-width="1.5"/>';
+  items.forEach((it, i) => {
+    const cx = x0 + i * dx, px = it.dim * k, sel = it.p.id === S.prop;
+    const col = it.solid ? 'var(--ok)' : 'var(--cool)', sw = sel ? 4 : 2.2;
+    if (it.solid) {
+      svg += '<rect x="' + (cx - px / 2).toFixed(1) + '" y="' + (base - px).toFixed(1) + '" width="' + px.toFixed(1) + '" height="' + px.toFixed(1) + '" rx="3" fill="' + col + '" fill-opacity=".3" stroke="' + (sel ? 'var(--ink)' : col) + '" stroke-width="' + sw + '"/>';
+    } else {
+      svg += '<circle cx="' + cx + '" cy="' + (base - px / 2).toFixed(1) + '" r="' + (px / 2).toFixed(1) + '" fill="' + col + '" fill-opacity=".3" stroke="' + (sel ? 'var(--ink)' : col) + '" stroke-width="' + sw + '"/>' +
+        '<circle cx="' + (cx - px * 0.14).toFixed(1) + '" cy="' + (base - px * 0.64).toFixed(1) + '" r="' + (px * 0.09).toFixed(1) + '" fill="var(--panel)" fill-opacity=".7"/>';
+    }
+    svg += '<text class="tb" x="' + cx + '" y="' + (base + 20) + '" text-anchor="middle">' + it.p.name + '</text>' +
+      '<text class="t" x="' + cx + '" y="' + (base + 37) + '" text-anchor="middle">' + fmtVol(it.V) + '</text>' +
+      '<text class="t" x="' + cx + '" y="' + (base + 53) + '" text-anchor="middle">' + fmtDim(it.dim) + (it.solid ? ' cube' : ' sphere') + '</text>' +
+      '<text class="tb" x="' + cx + '" y="' + (base + 73) + '" text-anchor="middle">' + massStr(it.tank) + (it.solid ? ' system' : ' tank') + '</text>' +
+      '<text class="t" x="' + cx + '" y="' + (base + 89) + '" text-anchor="middle">' + nf(100 * it.tank / M, it.tank / M < 0.1 ? 1 : 0) + '% of fuel</text>';
+  });
+  let bar = 1;
+  for (const c of [0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100]) { bar = c; if (c * k >= 45) break; }
+  const bw = bar * k, by = base + 118;
+  svg += '<line x1="12" y1="' + by + '" x2="' + (12 + bw).toFixed(1) + '" y2="' + by + '" stroke="var(--ink)" stroke-width="2"/>' +
+    '<line x1="12" y1="' + (by - 5) + '" x2="12" y2="' + (by + 5) + '" stroke="var(--ink)" stroke-width="2"/>' +
+    '<line x1="' + (12 + bw).toFixed(1) + '" y1="' + (by - 5) + '" x2="' + (12 + bw).toFixed(1) + '" y2="' + (by + 5) + '" stroke="var(--ink)" stroke-width="2"/>' +
+    '<text class="t" x="' + (22 + bw).toFixed(1) + '" y="' + (by + 4) + '">' + (bar >= 1 ? nf(bar, 0) + ' m' : nf(bar * 100, 0) + ' cm') + '</text>';
+  $('tanks').innerHTML = svg;
+  $('tank-cap').textContent = S.life + '-year supply for one spacecraft: ' + massStr(M) + '. Gases at ' + S.pStore + ' bar and 340 K, metals as bulk solid with a fixed-mass feed system. Tank sizes are propellant volume.';
+}
 function drawMoon(m) {
   const MOON_DEG = 0.5181;                                   // mean angular diameter of the Moon
   const side = Math.sqrt(m.Aarr);                            // square array, m
@@ -707,6 +781,7 @@ function update() {
 
   drawScene(m);
   drawScene3d();
+  drawTanks(m);
   drawMoon(m);
   drawChart('c-area', x => model(Object.assign({}, S, { phi: x }), KD).Arad, v => fmtArea(v), 'var(--cool)');
   drawChart('c-prop', x => model(Object.assign({}, S, { phi: x }), KD).propYr, v => massStr(v), 'var(--drag)');
